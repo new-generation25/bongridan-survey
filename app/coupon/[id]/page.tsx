@@ -27,8 +27,10 @@ export default function CouponPage({ params }: { params: Promise<{ id: string }>
         if (data.success && data.coupon) {
           setCoupon(data.coupon);
           
-          // QR 코드 생성
-          const qrUrl = await QRCode.toDataURL(data.coupon.code, {
+          // QR 코드 생성 (URL 형식: https://도메인/api/coupon/validate?id=쿠폰ID)
+          const baseUrl = window.location.origin;
+          const validateUrl = `${baseUrl}/api/coupon/validate?id=${resolvedParams.id}`;
+          const qrUrl = await QRCode.toDataURL(validateUrl, {
             width: 300,
             margin: 2,
           });
@@ -70,10 +72,13 @@ export default function CouponPage({ params }: { params: Promise<{ id: string }>
           <div className="text-center space-y-6">
             <div>
               <h1 className="text-3xl font-bold text-primary mb-2">
-                🎉 쿠폰 발급 완료!
+                🎉 축하합니다!
               </h1>
-              <p className="text-textSecondary">
-                설문에 참여해 주셔서 감사합니다
+              <p className="text-lg text-textSecondary mb-2">
+                500원 할인 쿠폰
+              </p>
+              <p className="text-sm text-textSecondary">
+                제출을 하면 500원이 적립되고, 추가설문에 응답하면 더 좋은 보상을 추첨하여 제공합니다
               </p>
             </div>
 
@@ -132,29 +137,60 @@ export default function CouponPage({ params }: { params: Promise<{ id: string }>
             {!isUsed && !isExpired && (
               <div className="bg-green-50 rounded-lg p-4">
                 <p className="text-success">
-                  유효기간: {formatDate(coupon.expires_at, 'datetime')}까지
+                  ⏰ 유효기간: 오늘 하루 ({formatDate(coupon.expires_at, 'datetime')}까지)
                 </p>
               </div>
             )}
 
-            {/* 버튼들 */}
-            <div className="space-y-3 pt-4">
-              <Button
-                onClick={() => router.push('/survey/step2')}
-                fullWidth
-                size="lg"
-              >
-                2단계 설문 계속하기
-              </Button>
-              
-              <Button
-                onClick={() => router.push('/stores')}
-                variant="outline"
-                fullWidth
-              >
-                가맹점 목록 보기
-              </Button>
+            {/* 사용 방법 안내 */}
+            <div className="text-left bg-gray-50 rounded-lg p-4 space-y-2 text-sm text-textSecondary">
+              <p className="font-semibold text-textPrimary">📍 사용 방법</p>
+              <ol className="list-decimal list-inside space-y-1">
+                <li>계산 시 이 화면을 보여주세요</li>
+                <li>점원이 QR코드를 스캔합니다</li>
+                <li>할인이 적용됩니다</li>
+              </ol>
+              <p className="mt-3 font-semibold text-textPrimary">📍 봉리단길 가맹점 어디서나 사용</p>
             </div>
+
+            {/* 추가 설문 안내 */}
+            <div className="bg-warning bg-opacity-10 rounded-xl p-6 space-y-4">
+              <div className="text-center">
+                <p className="text-xl font-bold text-warning mb-2">
+                  🎁 추가 설문하면 1만원 추첨!
+                </p>
+                <p className="text-textSecondary text-sm">
+                  추가 설문에 응답하시면 더 좋은 보상을 추첨하여 제공합니다
+                </p>
+              </div>
+              
+              <div className="space-y-3">
+                <Button
+                  onClick={() => router.push('/survey/step2')}
+                  fullWidth
+                  size="lg"
+                >
+                  추가 설문하고 응모하기
+                </Button>
+                
+                <Button
+                  onClick={() => router.push('/complete')}
+                  variant="outline"
+                  fullWidth
+                >
+                  다음에 할게요
+                </Button>
+              </div>
+            </div>
+
+            {/* 가맹점 목록 버튼 */}
+            <Button
+              onClick={() => router.push('/stores')}
+              variant="ghost"
+              fullWidth
+            >
+              가맹점 목록 보기
+            </Button>
 
             {/* 주의사항 */}
             <div className="text-left bg-gray-50 rounded-lg p-4 space-y-2 text-sm text-textSecondary">

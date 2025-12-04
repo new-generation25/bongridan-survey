@@ -17,19 +17,20 @@ export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
 
 // Supabase 헬퍼 함수들
 export const supabaseHelpers = {
-  // 설문 중복 확인
+  // 설문 중복 확인 (서버 사이드용)
   async checkDuplicateSurvey(deviceId: string): Promise<boolean> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('surveys')
       .select('id')
       .eq('device_id', deviceId)
       .gte('created_at', today.toISOString())
-      .single();
+      .maybeSingle();
 
     if (error && error.code !== 'PGRST116') {
+      console.error('Check duplicate error:', error);
       throw error;
     }
 
@@ -48,17 +49,17 @@ export const supabaseHelpers = {
     return expiryDate.toISOString();
   },
 
-  // 쿠폰 상태 확인
+  // 쿠폰 상태 확인 (서버 사이드용)
   async validateCoupon(code: string): Promise<{
     valid: boolean;
     message?: string;
     coupon?: unknown;
   }> {
-    const { data: coupon, error } = await supabase
+    const { data: coupon, error } = await supabaseAdmin
       .from('coupons')
       .select('*')
       .eq('code', code)
-      .single();
+      .maybeSingle();
 
     if (error || !coupon) {
       return { valid: false, message: '유효하지 않은 쿠폰입니다' };

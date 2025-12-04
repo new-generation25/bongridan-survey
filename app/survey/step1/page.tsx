@@ -30,9 +30,16 @@ export default function SurveyStep1Page() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // 기본 필수 항목 확인
     if (!formData.q1_region || !formData.q2_age || formData.q3_purpose.length === 0 ||
         !formData.q4_channel || !formData.q5_budget || !formData.q6_companion) {
       alert('모든 필수 항목을 입력해주세요.');
+      return;
+    }
+
+    // 김해시 선택 시 Q1-1 필수 확인
+    if (formData.q1_region === '김해시' && !formData.q1_1_dong) {
+      alert('김해시 동을 선택해주세요.');
       return;
     }
 

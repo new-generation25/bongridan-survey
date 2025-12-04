@@ -26,20 +26,26 @@ export async function POST(request: NextRequest) {
     }
 
     // 설문 데이터 삽입
+    const insertData: any = {
+      device_id: data.device_id,
+      q1_region: data.q1_region,
+      q2_age: data.q2_age,
+      q3_purpose: data.q3_purpose,
+      q4_channel: data.q4_channel,
+      q5_budget: data.q5_budget,
+      q6_companion: data.q6_companion,
+      response_time_step1: data.response_time_step1,
+      stage_completed: 1,
+    };
+
+    // 김해시가 아닌 경우 q1_1_dong은 null로 설정
+    if (data.q1_region === '김해시' && data.q1_1_dong) {
+      insertData.q1_1_dong = data.q1_1_dong;
+    }
+
     const { data: survey, error: surveyError } = await supabaseAdmin
       .from('surveys')
-      .insert({
-        device_id: data.device_id,
-        q1_region: data.q1_region,
-        q1_1_dong: data.q1_1_dong,
-        q2_age: data.q2_age,
-        q3_purpose: data.q3_purpose,
-        q4_channel: data.q4_channel,
-        q5_budget: data.q5_budget,
-        q6_companion: data.q6_companion,
-        response_time_step1: data.response_time_step1,
-        stage_completed: 1,
-      })
+      .insert(insertData)
       .select()
       .single();
 
