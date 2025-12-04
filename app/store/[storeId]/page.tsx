@@ -476,6 +476,11 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
             } catch (error) {
               console.error('QR scan callback error:', error);
               setError('QR 코드 처리 중 오류가 발생했습니다.');
+              if (errorTimeoutRef.current) {
+                clearTimeout(errorTimeoutRef.current);
+              }
+              errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
+              // 카메라는 유지 (setScanning 호출하지 않음)
             }
           },
           (error) => {
