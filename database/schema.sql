@@ -1,6 +1,22 @@
 -- 봉리단길 설문조사 시스템 데이터베이스 스키마
 
--- 1. surveys (설문 응답)
+-- UUID 확장 활성화 (필요한 경우)
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- 1. stores (가맹점) - 다른 테이블이 참조하므로 먼저 생성
+CREATE TABLE stores (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  
+  name VARCHAR(100) NOT NULL,
+  manager_name VARCHAR(50),
+  manager_phone VARCHAR(20),
+  
+  is_active BOOLEAN DEFAULT true,
+  total_settled INTEGER DEFAULT 0
+);
+
+-- 2. surveys (설문 응답)
 CREATE TABLE surveys (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -32,7 +48,7 @@ CREATE INDEX idx_surveys_created_at ON surveys(created_at);
 CREATE INDEX idx_surveys_device_id ON surveys(device_id);
 CREATE INDEX idx_surveys_q1_region ON surveys(q1_region);
 
--- 2. coupons (쿠폰)
+-- 3. coupons (쿠폰) - stores와 surveys를 참조하므로 나중에 생성
 CREATE TABLE coupons (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   code VARCHAR(6) UNIQUE NOT NULL,
@@ -52,19 +68,6 @@ CREATE TABLE coupons (
 CREATE INDEX idx_coupons_code ON coupons(code);
 CREATE INDEX idx_coupons_status ON coupons(status);
 CREATE INDEX idx_coupons_used_store_id ON coupons(used_store_id);
-
--- 3. stores (가맹점)
-CREATE TABLE stores (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  
-  name VARCHAR(100) NOT NULL,
-  manager_name VARCHAR(50),
-  manager_phone VARCHAR(20),
-  
-  is_active BOOLEAN DEFAULT true,
-  total_settled INTEGER DEFAULT 0
-);
 
 -- 4. settlements (정산 이력)
 CREATE TABLE settlements (

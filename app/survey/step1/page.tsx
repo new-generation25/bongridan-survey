@@ -9,7 +9,7 @@ import CheckboxGroup from '@/components/ui/CheckboxGroup';
 import ProgressBar from '@/components/ui/ProgressBar';
 import Loading from '@/components/ui/Loading';
 import { getDeviceId, storage } from '@/lib/utils';
-import { REGIONS, JUNG_GU_DONGS, AGE_GROUPS, VISIT_PURPOSES, VISIT_CHANNELS, BUDGETS, COMPANIONS } from '@/lib/constants';
+import { REGIONS, GIMHAE_DONGS, AGE_GROUPS, VISIT_PURPOSES, VISIT_CHANNELS, BUDGETS, COMPANIONS } from '@/lib/constants';
 
 export default function SurveyStep1Page() {
   const router = useRouter();
@@ -25,7 +25,7 @@ export default function SurveyStep1Page() {
     q6_companion: '',
   });
 
-  const showDongSelect = formData.q1_region === '중구';
+  const showDongSelect = formData.q1_region === '김해시';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -119,9 +119,9 @@ export default function SurveyStep1Page() {
 
             {showDongSelect && (
               <RadioGroup
-                label="Q1-1. 중구 거주자의 경우 동을 선택해주세요"
+                label="Q1-1. 김해시 어느 동에 거주하시나요?"
                 name="q1_1_dong"
-                options={JUNG_GU_DONGS.map(d => ({ label: d, value: d }))}
+                options={GIMHAE_DONGS.map(d => ({ label: d, value: d }))}
                 value={formData.q1_1_dong}
                 onChange={(value) => setFormData({ ...formData, q1_1_dong: value })}
               />
@@ -137,7 +137,7 @@ export default function SurveyStep1Page() {
             />
 
             <CheckboxGroup
-              label="Q3. 방문 목적 (복수선택 가능)"
+              label="Q3. 오늘 봉리단길 방문 목적 (복수선택 가능)"
               options={VISIT_PURPOSES.map(p => ({ label: p, value: p }))}
               values={formData.q3_purpose}
               onChange={(values) => setFormData({ ...formData, q3_purpose: values })}
@@ -154,7 +154,7 @@ export default function SurveyStep1Page() {
             />
 
             <RadioGroup
-              label="Q5. 오늘 예상 지출 금액"
+              label="Q5. 오늘 1인 예상 지출 금액"
               name="q5_budget"
               options={BUDGETS.map(b => ({ label: b, value: b }))}
               value={formData.q5_budget}

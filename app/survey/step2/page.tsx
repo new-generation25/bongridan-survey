@@ -100,7 +100,7 @@ export default function SurveyStep2Page() {
             />
 
             <RadioGroup
-              label="Q8. 오늘 예상 체류 시간"
+              label="Q8. 오늘 체류 예상 시간"
               name="q8_duration"
               options={DURATIONS.map(d => ({ label: d, value: d }))}
               value={formData.q8_duration}
@@ -109,7 +109,7 @@ export default function SurveyStep2Page() {
             />
 
             <RadioGroup
-              label="Q9. 봉리단길 만족도"
+              label="Q9. 봉리단길 전반적 만족도"
               name="q9_satisfaction"
               options={SATISFACTIONS.map(s => ({ label: s, value: s }))}
               value={formData.q9_satisfaction}
@@ -118,7 +118,7 @@ export default function SurveyStep2Page() {
             />
 
             <CheckboxGroup
-              label="Q10. 개선이 필요한 부분 (복수선택 가능)"
+              label="Q10. 봉리단길에서 아쉬운 점이 있다면? (복수선택 가능)"
               options={IMPROVEMENTS.map(i => ({ label: i, value: i }))}
               values={formData.q10_improvement}
               onChange={(values) => setFormData({ ...formData, q10_improvement: values })}
@@ -126,7 +126,7 @@ export default function SurveyStep2Page() {
             />
 
             <CheckboxGroup
-              label="Q11. 대전의 다른 방문 예정 관광지 (복수선택 가능)"
+              label="Q11. 봉리단길 외에 방문하고 싶은 김해 관광지는? (복수선택 가능)"
               options={OTHER_SPOTS.map(o => ({ label: o, value: o }))}
               values={formData.q11_other_spots}
               onChange={(values) => setFormData({ ...formData, q11_other_spots: values })}
