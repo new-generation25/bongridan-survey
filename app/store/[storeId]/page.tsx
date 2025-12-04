@@ -778,6 +778,39 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
             </div>
           )}
 
+          {/* 가맹점 적립 통계 (하단 고정) */}
+          {storeStats && (
+            <Card className="mt-6">
+              <div className="space-y-4">
+                <h3 className="text-lg font-bold text-textPrimary text-center">
+                  📊 {storeName} 적립 통계
+                </h3>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                    <p className="text-xs text-blue-700 font-semibold mb-1">오늘 현황</p>
+                    <p className="text-lg font-bold text-blue-900">
+                      {storeStats.today_count}건
+                    </p>
+                    <p className="text-sm font-semibold text-blue-800">
+                      {storeStats.today_amount.toLocaleString()}원
+                    </p>
+                  </div>
+
+                  <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                    <p className="text-xs text-green-700 font-semibold mb-1">누적 현황</p>
+                    <p className="text-lg font-bold text-green-900">
+                      {storeStats.total_count}건
+                    </p>
+                    <p className="text-sm font-semibold text-green-800">
+                      {storeStats.total_amount.toLocaleString()}원
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          )}
+
           <div className="mt-8 pt-6 border-t border-border text-sm text-textSecondary space-y-2">
             <p className="font-semibold text-textPrimary">
               💡 사용 안내
