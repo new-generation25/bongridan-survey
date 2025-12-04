@@ -18,7 +18,6 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccessFlash, setShowSuccessFlash] = useState(false);
   const [flashAmount, setFlashAmount] = useState(0);
-  const [showStats, setShowStats] = useState(false);
   const [storeStats, setStoreStats] = useState<{
     today_count: number;
     today_amount: number;
