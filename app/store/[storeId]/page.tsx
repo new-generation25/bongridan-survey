@@ -214,7 +214,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
     return () => {
       if (scanner) {
         scanner.stop().catch(console.error);
-        scanner.clear().catch(console.error);
+        scanner.clear();
       }
     };
   }, [scanning, storeId, storeName, router, handleCouponValidation, handleCouponValidationById]);
