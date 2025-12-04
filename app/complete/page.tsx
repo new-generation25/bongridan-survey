@@ -18,15 +18,23 @@ export default function CompletePage() {
         // 먼저 localStorage에서 쿠폰 ID 확인
         let id = localStorage.getItem('last_coupon_id') || storage.get<string>('coupon_id');
         
+        // 따옴표나 공백 제거
+        if (id) {
+          id = id.trim().replace(/^["']|["']$/g, '');
+        }
+        
         // 쿠폰 ID가 없으면 survey_id로 쿠폰 조회
         if (!id) {
           const surveyId = storage.get<string>('survey_id');
           if (surveyId) {
-            const response = await fetch(`/api/coupon/by-survey/${surveyId}`);
+            // surveyId도 정리
+            const cleanSurveyId = surveyId.trim().replace(/^["']|["']$/g, '');
+            const response = await fetch(`/api/coupon/by-survey/${cleanSurveyId}`);
             const data = await response.json();
             if (data.success && data.coupon && data.coupon.id) {
               id = data.coupon.id;
               if (id) {
+                // 정리된 ID 저장
                 localStorage.setItem('last_coupon_id', id);
               }
             }

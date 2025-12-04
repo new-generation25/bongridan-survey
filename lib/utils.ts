@@ -64,7 +64,20 @@ export const storage = {
     if (typeof window === 'undefined') return null;
     try {
       const item = localStorage.getItem(key);
-      return item ? JSON.parse(item) : null;
+      if (!item) return null;
+      
+      // 문자열인 경우 따옴표 제거
+      if (item.startsWith('"') && item.endsWith('"')) {
+        return JSON.parse(item) as T;
+      }
+      
+      // JSON 파싱 시도
+      try {
+        return JSON.parse(item) as T;
+      } catch {
+        // JSON이 아니면 문자열로 반환
+        return item as T;
+      }
     } catch {
       return null;
     }
@@ -73,7 +86,12 @@ export const storage = {
   set<T>(key: string, value: T): void {
     if (typeof window === 'undefined') return;
     try {
-      localStorage.setItem(key, JSON.stringify(value));
+      // 문자열인 경우 따옴표 없이 저장
+      if (typeof value === 'string') {
+        localStorage.setItem(key, value);
+      } else {
+        localStorage.setItem(key, JSON.stringify(value));
+      }
     } catch (error) {
       console.error('Storage set error:', error);
     }
