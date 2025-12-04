@@ -23,9 +23,24 @@ export async function GET(
       );
     }
 
+    // 설문 완료 상태 확인
+    let surveyStageCompleted = 1;
+    if (coupon.survey_id) {
+      const { data: survey } = await supabaseAdmin
+        .from('surveys')
+        .select('stage_completed')
+        .eq('id', coupon.survey_id)
+        .maybeSingle();
+      
+      surveyStageCompleted = survey?.stage_completed || 1;
+    }
+
     return NextResponse.json({
       success: true,
-      coupon,
+      coupon: {
+        ...coupon,
+        survey_stage_completed: surveyStageCompleted,
+      },
     });
   } catch (error) {
     console.error('Get coupon error:', error);

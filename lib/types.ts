@@ -37,6 +37,7 @@ export interface Coupon {
   expires_at: string;
   used_at?: string;
   used_store_id?: string;
+  survey_stage_completed?: number; // 설문 완료 단계 (1: 1단계만, 2: 2단계까지 완료)
 }
 
 export interface Store {

@@ -64,6 +64,7 @@ export default function CouponPage({ params }: { params: Promise<{ id: string }>
 
   const isExpired = new Date(coupon.expires_at) < new Date();
   const isUsed = coupon.status === 'used';
+  const isStep2Completed = coupon.survey_stage_completed === 2; // 2단계 설문 완료 여부
 
   return (
     <main className="min-h-screen bg-background py-8 px-4">
@@ -153,35 +154,37 @@ export default function CouponPage({ params }: { params: Promise<{ id: string }>
               <p className="mt-3 font-semibold text-textPrimary">📍 봉리단길 가맹점 어디서나 사용</p>
             </div>
 
-            {/* 추가 설문 안내 */}
-            <div className="bg-warning bg-opacity-10 rounded-xl p-6 space-y-4">
-              <div className="text-center">
-                <p className="text-xl font-bold text-warning mb-2">
-                  🎁 추가 설문하면 1만원 추첨!
-                </p>
-                <p className="text-textSecondary text-sm">
-                  추가 설문에 응답하시면 더 좋은 보상을 추첨하여 제공합니다
-                </p>
-              </div>
-              
-              <div className="space-y-3">
-                <Button
-                  onClick={() => router.push('/survey/step2')}
-                  fullWidth
-                  size="lg"
-                >
-                  추가 설문하고 응모하기
-                </Button>
+            {/* 추가 설문 안내 (2단계 설문 미완료 시에만 표시) */}
+            {!isStep2Completed && (
+              <div className="bg-warning bg-opacity-10 rounded-xl p-6 space-y-4">
+                <div className="text-center">
+                  <p className="text-xl font-bold text-warning mb-2">
+                    🎁 추가 설문하면 1만원 추첨!
+                  </p>
+                  <p className="text-textSecondary text-sm">
+                    추가 설문에 응답하시면 더 좋은 보상을 추첨하여 제공합니다
+                  </p>
+                </div>
                 
-                <Button
-                  onClick={() => router.push('/complete')}
-                  variant="outline"
-                  fullWidth
-                >
-                  다음에 할게요
-                </Button>
+                <div className="space-y-3">
+                  <Button
+                    onClick={() => router.push('/survey/step2')}
+                    fullWidth
+                    size="lg"
+                  >
+                    추가 설문하고 응모하기
+                  </Button>
+                  
+                  <Button
+                    onClick={() => router.push('/complete')}
+                    variant="outline"
+                    fullWidth
+                  >
+                    다음에 할게요
+                  </Button>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* 가맹점 목록 버튼 */}
             <Button
