@@ -122,68 +122,82 @@ export default function SurveyStep1Page() {
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            <RadioGroup
-              label="Q1. 거주 지역"
-              name="q1_region"
-              options={REGIONS.map(r => ({ label: r, value: r }))}
-              value={formData.q1_region}
-              onChange={(value) => setFormData({ ...formData, q1_region: value, q1_1_dong: '' })}
-              required
-            />
+            <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
+              <RadioGroup
+                label="Q1. 거주 지역"
+                name="q1_region"
+                options={REGIONS.map(r => ({ label: r, value: r }))}
+                value={formData.q1_region}
+                onChange={(value) => setFormData({ ...formData, q1_region: value, q1_1_dong: '' })}
+                required
+              />
+            </div>
 
             {showDongSelect && (
-              <RadioGroup
-                label="Q1-1. 김해시 어느 동에 거주하시나요?"
-                name="q1_1_dong"
-                options={GIMHAE_DONGS.map(d => ({ label: d, value: d }))}
-                value={formData.q1_1_dong}
-                onChange={(value) => setFormData({ ...formData, q1_1_dong: value })}
-              />
+              <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
+                <RadioGroup
+                  label="Q1-1. 김해시 어느 동에 거주하시나요?"
+                  name="q1_1_dong"
+                  options={GIMHAE_DONGS.map(d => ({ label: d, value: d }))}
+                  value={formData.q1_1_dong}
+                  onChange={(value) => setFormData({ ...formData, q1_1_dong: value })}
+                />
+              </div>
             )}
 
-            <RadioGroup
-              label="Q2. 연령대"
-              name="q2_age"
-              options={AGE_GROUPS.map(a => ({ label: a, value: a }))}
-              value={formData.q2_age}
-              onChange={(value) => setFormData({ ...formData, q2_age: value })}
-              required
-            />
+            <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
+              <RadioGroup
+                label="Q2. 연령대"
+                name="q2_age"
+                options={AGE_GROUPS.map(a => ({ label: a, value: a }))}
+                value={formData.q2_age}
+                onChange={(value) => setFormData({ ...formData, q2_age: value })}
+                required
+              />
+            </div>
 
-            <CheckboxGroup
-              label="Q3. 오늘 봉리단길 방문 목적 (복수선택 가능)"
-              options={VISIT_PURPOSES.map(p => ({ label: p, value: p }))}
-              values={formData.q3_purpose}
-              onChange={(values) => setFormData({ ...formData, q3_purpose: values })}
-              required
-            />
+            <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
+              <CheckboxGroup
+                label="Q3. 오늘 봉리단길 방문 목적 (복수선택 가능)"
+                options={VISIT_PURPOSES.map(p => ({ label: p, value: p }))}
+                values={formData.q3_purpose}
+                onChange={(values) => setFormData({ ...formData, q3_purpose: values })}
+                required
+              />
+            </div>
 
-            <RadioGroup
-              label="Q4. 봉리단길을 어떻게 알게 되셨나요?"
-              name="q4_channel"
-              options={VISIT_CHANNELS.map(c => ({ label: c, value: c }))}
-              value={formData.q4_channel}
-              onChange={(value) => setFormData({ ...formData, q4_channel: value })}
-              required
-            />
+            <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
+              <RadioGroup
+                label="Q4. 봉리단길을 어떻게 알게 되셨나요?"
+                name="q4_channel"
+                options={VISIT_CHANNELS.map(c => ({ label: c, value: c }))}
+                value={formData.q4_channel}
+                onChange={(value) => setFormData({ ...formData, q4_channel: value })}
+                required
+              />
+            </div>
 
-            <RadioGroup
-              label="Q5. 오늘 1인 예상 지출 금액"
-              name="q5_budget"
-              options={BUDGETS.map(b => ({ label: b, value: b }))}
-              value={formData.q5_budget}
-              onChange={(value) => setFormData({ ...formData, q5_budget: value })}
-              required
-            />
+            <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
+              <RadioGroup
+                label="Q5. 오늘 1인 예상 지출 금액"
+                name="q5_budget"
+                options={BUDGETS.map(b => ({ label: b, value: b }))}
+                value={formData.q5_budget}
+                onChange={(value) => setFormData({ ...formData, q5_budget: value })}
+                required
+              />
+            </div>
 
-            <RadioGroup
-              label="Q6. 누구와 함께 방문하셨나요?"
-              name="q6_companion"
-              options={COMPANIONS.map(c => ({ label: c, value: c }))}
-              value={formData.q6_companion}
-              onChange={(value) => setFormData({ ...formData, q6_companion: value })}
-              required
-            />
+            <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
+              <RadioGroup
+                label="Q6. 누구와 함께 방문하셨나요?"
+                name="q6_companion"
+                options={COMPANIONS.map(c => ({ label: c, value: c }))}
+                value={formData.q6_companion}
+                onChange={(value) => setFormData({ ...formData, q6_companion: value })}
+                required
+              />
+            </div>
 
             <Button type="submit" fullWidth size="lg">
               다음 단계로

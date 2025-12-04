@@ -90,48 +90,58 @@ export default function SurveyStep2Page() {
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            <RadioGroup
-              label="Q7. 봉리단길 방문 빈도"
-              name="q7_frequency"
-              options={FREQUENCIES.map(f => ({ label: f, value: f }))}
-              value={formData.q7_frequency}
-              onChange={(value) => setFormData({ ...formData, q7_frequency: value })}
-              required
-            />
+            <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
+              <RadioGroup
+                label="Q7. 봉리단길 방문 빈도"
+                name="q7_frequency"
+                options={FREQUENCIES.map(f => ({ label: f, value: f }))}
+                value={formData.q7_frequency}
+                onChange={(value) => setFormData({ ...formData, q7_frequency: value })}
+                required
+              />
+            </div>
 
-            <RadioGroup
-              label="Q8. 오늘 체류 예상 시간"
-              name="q8_duration"
-              options={DURATIONS.map(d => ({ label: d, value: d }))}
-              value={formData.q8_duration}
-              onChange={(value) => setFormData({ ...formData, q8_duration: value })}
-              required
-            />
+            <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
+              <RadioGroup
+                label="Q8. 오늘 체류 예상 시간"
+                name="q8_duration"
+                options={DURATIONS.map(d => ({ label: d, value: d }))}
+                value={formData.q8_duration}
+                onChange={(value) => setFormData({ ...formData, q8_duration: value })}
+                required
+              />
+            </div>
 
-            <RadioGroup
-              label="Q9. 봉리단길 전반적 만족도"
-              name="q9_satisfaction"
-              options={SATISFACTIONS.map(s => ({ label: s, value: s }))}
-              value={formData.q9_satisfaction}
-              onChange={(value) => setFormData({ ...formData, q9_satisfaction: value })}
-              required
-            />
+            <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
+              <RadioGroup
+                label="Q9. 봉리단길 전반적 만족도"
+                name="q9_satisfaction"
+                options={SATISFACTIONS.map(s => ({ label: s, value: s }))}
+                value={formData.q9_satisfaction}
+                onChange={(value) => setFormData({ ...formData, q9_satisfaction: value })}
+                required
+              />
+            </div>
 
-            <CheckboxGroup
-              label="Q10. 봉리단길에서 아쉬운 점이 있다면? (복수선택 가능)"
-              options={IMPROVEMENTS.map(i => ({ label: i, value: i }))}
-              values={formData.q10_improvement}
-              onChange={(values) => setFormData({ ...formData, q10_improvement: values })}
-              required
-            />
+            <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
+              <CheckboxGroup
+                label="Q10. 봉리단길에서 아쉬운 점이 있다면? (복수선택 가능)"
+                options={IMPROVEMENTS.map(i => ({ label: i, value: i }))}
+                values={formData.q10_improvement}
+                onChange={(values) => setFormData({ ...formData, q10_improvement: values })}
+                required
+              />
+            </div>
 
-            <CheckboxGroup
-              label="Q11. 봉리단길 외에 방문하고 싶은 김해 관광지는? (복수선택 가능)"
-              options={OTHER_SPOTS.map(o => ({ label: o, value: o }))}
-              values={formData.q11_other_spots}
-              onChange={(values) => setFormData({ ...formData, q11_other_spots: values })}
-              required
-            />
+            <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
+              <CheckboxGroup
+                label="Q11. 봉리단길 외에 방문하고 싶은 김해 관광지는? (복수선택 가능)"
+                options={OTHER_SPOTS.map(o => ({ label: o, value: o }))}
+                values={formData.q11_other_spots}
+                onChange={(values) => setFormData({ ...formData, q11_other_spots: values })}
+                required
+              />
+            </div>
 
             <div className="flex gap-3">
               <Button

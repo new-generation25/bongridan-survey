@@ -42,7 +42,7 @@ export default function CheckboxGroup({
   return (
     <div className="w-full">
       {label && (
-        <label className="block text-sm font-medium text-textPrimary mb-3" id={`${groupId}-label`}>
+        <label className="block text-lg font-bold text-textPrimary mb-3" id={`${groupId}-label`}>
           {label}
           {required && <span className="text-error ml-1">*</span>}
         </label>
@@ -77,7 +77,7 @@ export default function CheckboxGroup({
                 onChange={handleChange}
                 className="w-5 h-5 text-primary rounded focus:ring-primary"
               />
-              <span className="text-base text-textPrimary">{option.label}</span>
+              <span className="text-sm text-textPrimary">{option.label}</span>
             </label>
           );
         })}
