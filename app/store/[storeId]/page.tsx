@@ -141,13 +141,26 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       let validateData;
       try {
         const text = await validateResponse.text();
+        console.log('Validate API 응답 상태:', validateResponse.status, validateResponse.statusText);
+        console.log('Validate API 응답 내용:', text.substring(0, 200));
+        
         if (!text) {
           throw new Error('응답이 비어있습니다');
         }
+        
+        // HTML 응답인지 확인 (리다이렉트 등)
+        if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+          console.error('HTML 응답 받음:', text.substring(0, 200));
+          setError('서버 오류가 발생했습니다. (HTML 응답)');
+          setIsProcessing(false);
+          return false;
+        }
+        
         validateData = JSON.parse(text);
       } catch (parseError) {
         console.error('JSON 파싱 오류:', parseError);
-        setError('서버 응답 오류가 발생했습니다.');
+        console.error('응답 상태:', validateResponse.status);
+        setError(`서버 응답 오류가 발생했습니다. (상태: ${validateResponse.status})`);
         setIsProcessing(false);
         return false;
       }
@@ -436,25 +449,43 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
 
               {/* 성공 플래시 효과 - 검정색 깜박임 + 500원 적립 효과 */}
               {showSuccessFlash && (
-                <div className="fixed inset-0 bg-black z-50 flex items-center justify-center pointer-events-none animate-pulse">
-                  <div className="bg-white rounded-lg p-8 shadow-2xl transform scale-110">
-                    <p className="text-5xl font-bold text-green-600 text-center mb-2">+{flashAmount}원</p>
-                    <p className="text-xl font-bold text-green-700 text-center">적립 완료!</p>
-                  </div>
-                </div>
-              )}
-
-              <div id="qr-reader" className="w-full relative">
-                {/* QR 스캔 영역 위에 검정색 깜박임 오버레이 */}
-                {showSuccessFlash && (
-                  <div className="absolute inset-0 bg-black bg-opacity-80 z-10 rounded-lg flex items-center justify-center pointer-events-none animate-pulse">
-                    <div className="bg-white rounded-lg p-6 shadow-lg">
-                      <p className="text-4xl font-bold text-green-600 text-center">+{flashAmount}원</p>
-                      <p className="text-lg font-bold text-green-700 mt-2 text-center">적립!</p>
+                <>
+                  {/* 전체 화면 검정색 오버레이 */}
+                  <div 
+                    className="fixed inset-0 bg-black z-50 flex items-center justify-center pointer-events-none"
+                    style={{
+                      animation: 'flash 0.8s ease-in-out',
+                    }}
+                  >
+                    <div className="bg-white rounded-lg p-8 shadow-2xl transform scale-110">
+                      <p className="text-5xl font-bold text-green-600 text-center mb-2">+{flashAmount}원</p>
+                      <p className="text-xl font-bold text-green-700 text-center">적립 완료!</p>
                     </div>
                   </div>
-                )}
-              </div>
+                  
+                  {/* QR 스캔 영역 위에 검정색 깜박임 오버레이 */}
+                  <div 
+                    id="qr-reader" 
+                    className="w-full relative"
+                  >
+                    <div 
+                      className="absolute inset-0 bg-black bg-opacity-90 z-10 rounded-lg flex items-center justify-center pointer-events-none"
+                      style={{
+                        animation: 'flash 0.8s ease-in-out',
+                      }}
+                    >
+                      <div className="bg-white rounded-lg p-6 shadow-lg">
+                        <p className="text-4xl font-bold text-green-600 text-center">+{flashAmount}원</p>
+                        <p className="text-lg font-bold text-green-700 mt-2 text-center">적립!</p>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+              
+              {!showSuccessFlash && (
+                <div id="qr-reader" className="w-full"></div>
+              )}
               
               <Button
                 onClick={handleStopScan}
