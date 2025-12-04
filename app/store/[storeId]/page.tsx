@@ -497,6 +497,10 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         scanner.stop().catch(console.error);
         scanner.clear();
       }
+      // 에러 타임아웃 정리
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+      }
     };
   }, [scanning, storeId, storeName, router, handleCouponValidation, handleCouponValidationById]);
 
