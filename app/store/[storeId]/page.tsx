@@ -17,6 +17,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
   const [scanCount, setScanCount] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccessFlash, setShowSuccessFlash] = useState(false);
+  const [flashAmount, setFlashAmount] = useState(0);
   const scannedCouponsRef = useRef<Set<string>>(new Set());
   const qrCodeRef = useRef<Html5Qrcode | null>(null);
 
@@ -68,15 +69,33 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         }),
       });
 
-      const data = await response.json();
+      // 응답이 JSON인지 확인
+      let data;
+      try {
+        const text = await response.text();
+        if (!text) {
+          throw new Error('응답이 비어있습니다');
+        }
+        data = JSON.parse(text);
+      } catch (parseError) {
+        console.error('JSON 파싱 오류:', parseError);
+        setError('서버 응답 오류가 발생했습니다.');
+        setIsProcessing(false);
+        return false;
+      }
 
       if (!response.ok) {
         // 이미 사용된 쿠폰인 경우
-        if (data.message?.includes('이미 사용') || data.message?.includes('사용된')) {
+        const errorMessage = data.message || '쿠폰 사용에 실패했습니다.';
+        if (errorMessage.includes('이미 사용') || errorMessage.includes('사용된') || errorMessage.includes('이미 적립')) {
           scannedCouponsRef.current.add(code);
           setError('이미 적립된 쿠폰입니다.');
+        } else if (errorMessage.includes('유효하지 않은')) {
+          setError('유효하지 않은 쿠폰입니다.');
+        } else if (errorMessage.includes('만료')) {
+          setError('쿠폰이 만료되었습니다.');
         } else {
-          setError(data.message || '쿠폰 사용에 실패했습니다.');
+          setError(errorMessage);
         }
         setIsProcessing(false);
         return false;
@@ -138,15 +157,33 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         }),
       });
 
-      const data = await response.json();
+      // 응답이 JSON인지 확인
+      let data;
+      try {
+        const text = await response.text();
+        if (!text) {
+          throw new Error('응답이 비어있습니다');
+        }
+        data = JSON.parse(text);
+      } catch (parseError) {
+        console.error('JSON 파싱 오류:', parseError);
+        setError('서버 응답 오류가 발생했습니다.');
+        setIsProcessing(false);
+        return false;
+      }
 
       if (!response.ok) {
         // 이미 사용된 쿠폰인 경우
-        if (data.message?.includes('이미 사용') || data.message?.includes('사용된')) {
+        const errorMessage = data.message || '쿠폰 사용에 실패했습니다.';
+        if (errorMessage.includes('이미 사용') || errorMessage.includes('사용된') || errorMessage.includes('이미 적립')) {
           scannedCouponsRef.current.add(couponId);
           setError('이미 적립된 쿠폰입니다.');
+        } else if (errorMessage.includes('유효하지 않은')) {
+          setError('유효하지 않은 쿠폰입니다.');
+        } else if (errorMessage.includes('만료')) {
+          setError('쿠폰이 만료되었습니다.');
         } else {
-          setError(data.message || '쿠폰 사용에 실패했습니다.');
+          setError(errorMessage);
         }
         setIsProcessing(false);
         return false;
@@ -366,22 +403,23 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
                 </div>
               )}
 
-              {/* 성공 플래시 효과 */}
+              {/* 성공 플래시 효과 - 검정색 깜박임 + 500원 적립 효과 */}
               {showSuccessFlash && (
-                <div className="fixed inset-0 bg-green-400 bg-opacity-50 z-50 flex items-center justify-center pointer-events-none animate-pulse">
+                <div className="fixed inset-0 bg-black z-50 flex items-center justify-center pointer-events-none animate-pulse">
                   <div className="bg-white rounded-lg p-8 shadow-2xl transform scale-110">
-                    <p className="text-4xl font-bold text-green-600 text-center">✓</p>
-                    <p className="text-xl font-bold text-green-700 mt-2 text-center">적립 완료!</p>
+                    <p className="text-5xl font-bold text-green-600 text-center mb-2">+{flashAmount}원</p>
+                    <p className="text-xl font-bold text-green-700 text-center">적립 완료!</p>
                   </div>
                 </div>
               )}
 
               <div id="qr-reader" className="w-full relative">
-                {/* QR 스캔 영역 위에 오버레이 */}
+                {/* QR 스캔 영역 위에 검정색 깜박임 오버레이 */}
                 {showSuccessFlash && (
-                  <div className="absolute inset-0 bg-green-400 bg-opacity-30 z-10 rounded-lg flex items-center justify-center pointer-events-none">
-                    <div className="bg-white rounded-full p-4 shadow-lg">
-                      <p className="text-3xl">✓</p>
+                  <div className="absolute inset-0 bg-black bg-opacity-80 z-10 rounded-lg flex items-center justify-center pointer-events-none animate-pulse">
+                    <div className="bg-white rounded-lg p-6 shadow-lg">
+                      <p className="text-4xl font-bold text-green-600 text-center">+{flashAmount}원</p>
+                      <p className="text-lg font-bold text-green-700 mt-2 text-center">적립!</p>
                     </div>
                   </div>
                 )}
