@@ -15,6 +15,8 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
   const [error, setError] = useState('');
   const [totalAmount, setTotalAmount] = useState(0);
   const [scanCount, setScanCount] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const scannedCouponsRef = useRef<Set<string>>(new Set());
   const qrCodeRef = useRef<Html5Qrcode | null>(null);
 
   useEffect(() => {
@@ -44,7 +46,35 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
   }, [params, router]);
 
   const handleCouponValidation = useCallback(async (code: string) => {
+    // 중복 스캔 체크
+    if (scannedCouponsRef.current.has(code)) {
+      setError('이미 적립된 쿠폰입니다.');
+      return false;
+    }
+
+    setIsProcessing(true);
+    
     try {
+      // 스캔 성공 피드백 (찰칵 효과)
+      const audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.value = 800;
+      oscillator.type = 'sine';
+      
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.1);
+
+      // 처리 딜레이 (500ms)
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       const response = await fetch('/api/coupon/use', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -57,23 +87,43 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.message || '쿠폰 사용에 실패했습니다.');
+        // 이미 사용된 쿠폰인 경우
+        if (data.message?.includes('이미 사용') || data.message?.includes('사용된')) {
+          scannedCouponsRef.current.add(code);
+          setError('이미 적립된 쿠폰입니다.');
+        } else {
+          setError(data.message || '쿠폰 사용에 실패했습니다.');
+        }
+        setIsProcessing(false);
         return false;
       }
+
+      // 성공 시 스캔된 쿠폰에 추가
+      scannedCouponsRef.current.add(code);
 
       // 누적 금액 업데이트 (카메라 유지)
       setTotalAmount((prev) => prev + (data.total_amount || 500));
       setScanCount((prev) => prev + 1);
       setError(''); // 성공 시 에러 메시지 제거
+      setIsProcessing(false);
       return true;
     } catch (error) {
       console.error('Coupon validation error:', error);
       setError('네트워크 오류가 발생했습니다.');
+      setIsProcessing(false);
       return false;
     }
   }, [storeId]);
 
   const handleCouponValidationById = useCallback(async (couponId: string) => {
+    // 중복 스캔 체크
+    if (scannedCouponsRef.current.has(couponId)) {
+      setError('이미 적립된 쿠폰입니다.');
+      return false;
+    }
+
+    setIsProcessing(true);
+
     try {
       // 먼저 쿠폰 정보 조회 (상점용 파라미터 추가)
       const validateResponse = await fetch(`/api/coupon/validate?id=${couponId}&store=${storeId}`);
@@ -81,8 +131,29 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
 
       if (!validateResponse.ok || !validateData.valid) {
         setError(validateData.message || '유효하지 않은 쿠폰입니다.');
+        setIsProcessing(false);
         return false;
       }
+
+      // 스캔 성공 피드백 (찰칵 효과)
+      const audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.value = 800;
+      oscillator.type = 'sine';
+      
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.1);
+
+      // 처리 딜레이 (500ms)
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       // 쿠폰 사용 처리
       const response = await fetch('/api/coupon/use', {
@@ -97,18 +168,30 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.message || '쿠폰 사용에 실패했습니다.');
+        // 이미 사용된 쿠폰인 경우
+        if (data.message?.includes('이미 사용') || data.message?.includes('사용된')) {
+          scannedCouponsRef.current.add(couponId);
+          setError('이미 적립된 쿠폰입니다.');
+        } else {
+          setError(data.message || '쿠폰 사용에 실패했습니다.');
+        }
+        setIsProcessing(false);
         return false;
       }
+
+      // 성공 시 스캔된 쿠폰에 추가
+      scannedCouponsRef.current.add(couponId);
 
       // 누적 금액 업데이트 (카메라 유지)
       setTotalAmount((prev) => prev + (data.total_amount || 500));
       setScanCount((prev) => prev + 1);
       setError(''); // 성공 시 에러 메시지 제거
+      setIsProcessing(false);
       return true;
     } catch (error) {
       console.error('Coupon validation error:', error);
       setError('네트워크 오류가 발생했습니다.');
+      setIsProcessing(false);
       return false;
     }
   }, [storeId]);
@@ -167,6 +250,11 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
           },
           async (decodedText) => {
             try {
+              // 처리 중이면 무시 (중복 스캔 방지)
+              if (isProcessing) {
+                return;
+              }
+
               // QR 코드 스캔 성공 - 카메라는 계속 유지
               // 스캐너를 멈추지 않고 계속 스캔 가능하도록 유지
               
@@ -224,7 +312,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         scanner.clear();
       }
     };
-  }, [scanning, storeId, storeName, router, handleCouponValidation, handleCouponValidationById]);
+  }, [scanning, storeId, storeName, router, handleCouponValidation, handleCouponValidationById, isProcessing]);
 
 
   const handleStartScan = () => {
@@ -255,7 +343,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
 
           {error && (
             <div className="bg-red-50 border border-error rounded-lg p-4 mb-6">
-              <p className="text-error font-medium">⚠️ {error}</p>
+              <p className="text-error font-medium text-center">⚠️ {error}</p>
             </div>
           )}
 
@@ -277,6 +365,13 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
 
           {scanning && (
             <div className="space-y-4">
+              {/* 처리 중 표시 */}
+              {isProcessing && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
+                  <p className="text-blue-700 font-medium">적립 처리 중...</p>
+                </div>
+              )}
+
               <div id="qr-reader" className="w-full"></div>
               
               {/* 누적 금액 표시 */}
@@ -299,7 +394,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
                 variant="outline"
                 fullWidth
               >
-                스캔 중지
+                {totalAmount > 0 ? '적립 완료' : '스캔 중지'}
               </Button>
             </div>
           )}
