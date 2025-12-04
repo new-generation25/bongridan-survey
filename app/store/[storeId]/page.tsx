@@ -20,6 +20,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
   const [flashAmount, setFlashAmount] = useState(0);
   const scannedCouponsRef = useRef<Set<string>>(new Set());
   const qrCodeRef = useRef<Html5Qrcode | null>(null);
+  const errorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     // 스토어 정보 가져오기
@@ -51,10 +52,16 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
     // 중복 스캔 체크
     if (scannedCouponsRef.current.has(code)) {
       setError('이미 적립된 쿠폰입니다.');
+      // 에러 메시지 자동 제거 (3초 후)
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+      }
+      errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
       return false;
     }
 
     setIsProcessing(true);
+    setError(''); // 처리 시작 시 에러 메시지 제거
     
     try {
       // 처리 딜레이 (500ms)
@@ -84,7 +91,12 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
           console.error('HTML 응답 받음:', text.substring(0, 200));
           setError('서버 오류가 발생했습니다. (HTML 응답)');
+          if (errorTimeoutRef.current) {
+            clearTimeout(errorTimeoutRef.current);
+          }
+          errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
           setIsProcessing(false);
+          // 카메라는 유지 (setScanning 호출하지 않음)
           return false;
         }
         
@@ -94,7 +106,12 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         console.error('응답 상태:', response.status);
         console.error('응답 헤더:', Object.fromEntries(response.headers.entries()));
         setError(`서버 응답 오류가 발생했습니다. (상태: ${response.status})`);
+        if (errorTimeoutRef.current) {
+          clearTimeout(errorTimeoutRef.current);
+        }
+        errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
         setIsProcessing(false);
+        // 카메라는 유지 (setScanning 호출하지 않음)
         return false;
       }
 
@@ -104,14 +121,32 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         if (errorMessage.includes('이미 사용') || errorMessage.includes('사용된') || errorMessage.includes('이미 적립')) {
           scannedCouponsRef.current.add(code);
           setError('이미 적립된 쿠폰입니다.');
+          // 에러 메시지 자동 제거 (3초 후)
+          if (errorTimeoutRef.current) {
+            clearTimeout(errorTimeoutRef.current);
+          }
+          errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
         } else if (errorMessage.includes('유효하지 않은')) {
           setError('유효하지 않은 쿠폰입니다.');
+          if (errorTimeoutRef.current) {
+            clearTimeout(errorTimeoutRef.current);
+          }
+          errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
         } else if (errorMessage.includes('만료')) {
           setError('쿠폰이 만료되었습니다.');
+          if (errorTimeoutRef.current) {
+            clearTimeout(errorTimeoutRef.current);
+          }
+          errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
         } else {
           setError(errorMessage);
+          if (errorTimeoutRef.current) {
+            clearTimeout(errorTimeoutRef.current);
+          }
+          errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
         }
         setIsProcessing(false);
+        // 카메라는 유지 (setScanning 호출하지 않음)
         return false;
       }
 
@@ -133,7 +168,12 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
     } catch (error) {
       console.error('Coupon validation error:', error);
       setError('네트워크 오류가 발생했습니다.');
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+      }
+      errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
       setIsProcessing(false);
+      // 카메라는 유지 (setScanning 호출하지 않음)
       return false;
     }
   }, [storeId]);
@@ -142,10 +182,16 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
     // 중복 스캔 체크
     if (scannedCouponsRef.current.has(couponId)) {
       setError('이미 적립된 쿠폰입니다.');
+      // 에러 메시지 자동 제거 (3초 후)
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+      }
+      errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
       return false;
     }
 
     setIsProcessing(true);
+    setError(''); // 처리 시작 시 에러 메시지 제거
 
     try {
       // 먼저 쿠폰 정보 조회 (상점용 파라미터 추가)
@@ -166,7 +212,12 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
           console.error('HTML 응답 받음:', text.substring(0, 200));
           setError('서버 오류가 발생했습니다. (HTML 응답)');
+          if (errorTimeoutRef.current) {
+            clearTimeout(errorTimeoutRef.current);
+          }
+          errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
           setIsProcessing(false);
+          // 카메라는 유지 (setScanning 호출하지 않음)
           return false;
         }
         
@@ -175,7 +226,12 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         console.error('JSON 파싱 오류:', parseError);
         console.error('응답 상태:', validateResponse.status);
         setError(`서버 응답 오류가 발생했습니다. (상태: ${validateResponse.status})`);
+        if (errorTimeoutRef.current) {
+          clearTimeout(errorTimeoutRef.current);
+        }
+        errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
         setIsProcessing(false);
+        // 카메라는 유지 (setScanning 호출하지 않음)
         return false;
       }
 
@@ -187,7 +243,12 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         } else {
           setError(errorMessage);
         }
+        if (errorTimeoutRef.current) {
+          clearTimeout(errorTimeoutRef.current);
+        }
+        errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
         setIsProcessing(false);
+        // 카메라는 유지 (setScanning 호출하지 않음)
         return false;
       }
 
@@ -219,7 +280,12 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
           console.error('HTML 응답 받음 (by ID):', text.substring(0, 200));
           setError('서버 오류가 발생했습니다. (HTML 응답)');
+          if (errorTimeoutRef.current) {
+            clearTimeout(errorTimeoutRef.current);
+          }
+          errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
           setIsProcessing(false);
+          // 카메라는 유지 (setScanning 호출하지 않음)
           return false;
         }
         
@@ -229,7 +295,12 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         console.error('응답 상태:', response.status);
         console.error('응답 헤더:', Object.fromEntries(response.headers.entries()));
         setError(`서버 응답 오류가 발생했습니다. (상태: ${response.status})`);
+        if (errorTimeoutRef.current) {
+          clearTimeout(errorTimeoutRef.current);
+        }
+        errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
         setIsProcessing(false);
+        // 카메라는 유지 (setScanning 호출하지 않음)
         return false;
       }
 
@@ -239,14 +310,32 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         if (errorMessage.includes('이미 사용') || errorMessage.includes('사용된') || errorMessage.includes('이미 적립')) {
           scannedCouponsRef.current.add(couponId);
           setError('이미 적립된 쿠폰입니다.');
+          // 에러 메시지 자동 제거 (3초 후)
+          if (errorTimeoutRef.current) {
+            clearTimeout(errorTimeoutRef.current);
+          }
+          errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
         } else if (errorMessage.includes('유효하지 않은')) {
           setError('유효하지 않은 쿠폰입니다.');
+          if (errorTimeoutRef.current) {
+            clearTimeout(errorTimeoutRef.current);
+          }
+          errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
         } else if (errorMessage.includes('만료')) {
           setError('쿠폰이 만료되었습니다.');
+          if (errorTimeoutRef.current) {
+            clearTimeout(errorTimeoutRef.current);
+          }
+          errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
         } else {
           setError(errorMessage);
+          if (errorTimeoutRef.current) {
+            clearTimeout(errorTimeoutRef.current);
+          }
+          errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
         }
         setIsProcessing(false);
+        // 카메라는 유지 (setScanning 호출하지 않음)
         return false;
       }
 
@@ -279,7 +368,12 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       } else {
         setError('쿠폰 처리 중 오류가 발생했습니다.');
       }
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+      }
+      errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
       setIsProcessing(false);
+      // 카메라는 유지 (setScanning 호출하지 않음)
       return false;
     }
   }, [storeId]);
@@ -475,44 +569,37 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
                 </div>
               )}
 
-              {/* 성공 플래시 효과 - 검정색 깜박임 + 500원 적립 효과 */}
-              {showSuccessFlash && (
-                <>
-                  {/* 전체 화면 검정색 오버레이 */}
+              {/* QR reader는 항상 렌더링 (카메라 유지) */}
+              <div id="qr-reader" className="w-full relative">
+                {/* 성공 플래시 효과 - 검정색 깜박임 + 500원 적립 효과 */}
+                {showSuccessFlash && (
                   <div 
-                    className="fixed inset-0 bg-black z-50 flex items-center justify-center pointer-events-none"
+                    className="absolute inset-0 bg-black bg-opacity-90 z-10 rounded-lg flex items-center justify-center pointer-events-none"
                     style={{
                       animation: 'flash 0.8s ease-in-out',
                     }}
                   >
-                    <div className="bg-white rounded-lg p-8 shadow-2xl transform scale-110">
-                      <p className="text-5xl font-bold text-green-600 text-center mb-2">+{flashAmount}원</p>
-                      <p className="text-xl font-bold text-green-700 text-center">적립 완료!</p>
+                    <div className="bg-white rounded-lg p-6 shadow-lg">
+                      <p className="text-4xl font-bold text-green-600 text-center">+{flashAmount}원</p>
+                      <p className="text-lg font-bold text-green-700 mt-2 text-center">적립!</p>
                     </div>
                   </div>
-                  
-                  {/* QR 스캔 영역 위에 검정색 깜박임 오버레이 */}
-                  <div 
-                    id="qr-reader" 
-                    className="w-full relative"
-                  >
-                    <div 
-                      className="absolute inset-0 bg-black bg-opacity-90 z-10 rounded-lg flex items-center justify-center pointer-events-none"
-                      style={{
-                        animation: 'flash 0.8s ease-in-out',
-                      }}
-                    >
-                      <div className="bg-white rounded-lg p-6 shadow-lg">
-                        <p className="text-4xl font-bold text-green-600 text-center">+{flashAmount}원</p>
-                        <p className="text-lg font-bold text-green-700 mt-2 text-center">적립!</p>
-                      </div>
-                    </div>
+                )}
+              </div>
+
+              {/* 전체 화면 플래시 효과 */}
+              {showSuccessFlash && (
+                <div 
+                  className="fixed inset-0 bg-black z-50 flex items-center justify-center pointer-events-none"
+                  style={{
+                    animation: 'flash 0.8s ease-in-out',
+                  }}
+                >
+                  <div className="bg-white rounded-lg p-8 shadow-2xl transform scale-110">
+                    <p className="text-5xl font-bold text-green-600 text-center mb-2">+{flashAmount}원</p>
+                    <p className="text-xl font-bold text-green-700 text-center">적립 완료!</p>
                   </div>
-                </>
-              )}
-              
-              {!showSuccessFlash && (
-                <div id="qr-reader" className="w-full"></div>
+                </div>
               )}
               
               <Button
