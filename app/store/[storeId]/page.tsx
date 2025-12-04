@@ -29,6 +29,26 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
   const qrCodeRef = useRef<Html5Qrcode | null>(null);
   const errorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // 통계 조회 함수
+  const fetchStoreStats = useCallback(async (storeIdValue: string) => {
+    try {
+      const response = await fetch(`/api/store/${storeIdValue}/stats`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setStoreStats({
+            today_count: data.today_count || 0,
+            today_amount: data.today_amount || 0,
+            total_count: data.total_count || 0,
+            total_amount: data.total_amount || 0,
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Fetch stats error:', error);
+    }
+  }, []);
+
   useEffect(() => {
     // 스토어 정보 가져오기
     const fetchStore = async () => {
@@ -57,26 +77,6 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
 
     fetchStore();
   }, [params, router, fetchStoreStats]);
-
-  // 통계 조회 함수
-  const fetchStoreStats = useCallback(async (storeIdValue: string) => {
-    try {
-      const response = await fetch(`/api/store/${storeIdValue}/stats`);
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setStoreStats({
-            today_count: data.today_count || 0,
-            today_amount: data.today_amount || 0,
-            total_count: data.total_count || 0,
-            total_amount: data.total_amount || 0,
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Fetch stats error:', error);
-    }
-  }, []);
 
   const handleCouponValidation = useCallback(async (code: string) => {
     // 중복 스캔 체크
