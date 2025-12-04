@@ -1,0 +1,92 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { supabaseAdmin, supabaseHelpers } from '@/lib/supabase';
+import { ERROR_MESSAGES, COUPON_CONFIG } from '@/lib/constants';
+import type { SurveyStep1Data } from '@/lib/types';
+
+export async function POST(request: NextRequest) {
+  try {
+    const data: SurveyStep1Data = await request.json();
+
+    // 필수 필드 검증
+    if (!data.device_id || !data.q1_region || !data.q2_age || !data.q3_purpose || 
+        !data.q4_channel || !data.q5_budget || !data.q6_companion) {
+      return NextResponse.json(
+        { success: false, message: ERROR_MESSAGES.INVALID_REQUEST },
+        { status: 400 }
+      );
+    }
+
+    // 중복 응답 확인
+    const isDuplicate = await supabaseHelpers.checkDuplicateSurvey(data.device_id);
+    if (isDuplicate) {
+      return NextResponse.json(
+        { success: false, message: ERROR_MESSAGES.DUPLICATE_RESPONSE },
+        { status: 409 }
+      );
+    }
+
+    // 설문 데이터 삽입
+    const { data: survey, error: surveyError } = await supabaseAdmin
+      .from('surveys')
+      .insert({
+        device_id: data.device_id,
+        q1_region: data.q1_region,
+        q1_1_dong: data.q1_1_dong,
+        q2_age: data.q2_age,
+        q3_purpose: data.q3_purpose,
+        q4_channel: data.q4_channel,
+        q5_budget: data.q5_budget,
+        q6_companion: data.q6_companion,
+        response_time_step1: data.response_time_step1,
+        stage_completed: 1,
+      })
+      .select()
+      .single();
+
+    if (surveyError || !survey) {
+      console.error('Survey insert error:', surveyError);
+      return NextResponse.json(
+        { success: false, message: ERROR_MESSAGES.INTERNAL_ERROR },
+        { status: 500 }
+      );
+    }
+
+    // 쿠폰 생성
+    const couponCode = supabaseHelpers.generateCouponCode();
+    const expiresAt = supabaseHelpers.calculateExpiryDate(COUPON_CONFIG.VALIDITY_HOURS);
+
+    const { data: coupon, error: couponError } = await supabaseAdmin
+      .from('coupons')
+      .insert({
+        code: couponCode,
+        survey_id: survey.id,
+        amount: COUPON_CONFIG.AMOUNT,
+        expires_at: expiresAt,
+        status: 'issued',
+      })
+      .select()
+      .single();
+
+    if (couponError || !coupon) {
+      console.error('Coupon insert error:', couponError);
+      return NextResponse.json(
+        { success: false, message: ERROR_MESSAGES.INTERNAL_ERROR },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      survey_id: survey.id,
+      coupon_id: coupon.id,
+      coupon_code: couponCode,
+    });
+  } catch (error) {
+    console.error('Step1 survey error:', error);
+    return NextResponse.json(
+      { success: false, message: ERROR_MESSAGES.INTERNAL_ERROR },
+      { status: 500 }
+    );
+  }
+}
+

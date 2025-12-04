@@ -1,0 +1,177 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Html5QrcodeScanner } from 'html5-qrcode';
+import Card from '@/components/ui/Card';
+import Button from '@/components/ui/Button';
+import Loading from '@/components/ui/Loading';
+
+export default function StoreScanPage({ params }: { params: Promise<{ storeId: string }> }) {
+  const router = useRouter();
+  const [storeName, setStoreName] = useState('');
+  const [storeId, setStoreId] = useState('');
+  const [scanning, setScanning] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    // 스토어 정보 가져오기
+    const fetchStore = async () => {
+      try {
+        const resolvedParams = await params;
+        setStoreId(resolvedParams.storeId);
+        const response = await fetch('/api/stores');
+        const data = await response.json();
+        
+        if (data.success && data.stores) {
+          const store = data.stores.find((s: { id: string; name: string }) => s.id === resolvedParams.storeId);
+          if (store) {
+            setStoreName(store.name);
+          } else {
+            alert('존재하지 않는 가맹점입니다.');
+            router.push('/');
+          }
+        }
+      } catch (error) {
+        console.error('Fetch store error:', error);
+      }
+    };
+
+    fetchStore();
+  }, [params, router]);
+
+  useEffect(() => {
+    if (!scanning) return;
+
+    const scanner = new Html5QrcodeScanner(
+      'qr-reader',
+      {
+        fps: 10,
+        qrbox: { width: 250, height: 250 },
+      },
+      false
+    );
+
+    scanner.render(
+      async (decodedText) => {
+        // QR 코드 스캔 성공
+        scanner.clear();
+        setScanning(false);
+        await handleCouponValidation(decodedText);
+      },
+      (error) => {
+        // 스캔 실패 (무시)
+        console.log('Scan error:', error);
+      }
+    );
+
+    return () => {
+      scanner.clear().catch(console.error);
+    };
+  }, [scanning]);
+
+  const handleCouponValidation = async (code: string) => {
+    try {
+      const response = await fetch('/api/coupon/use', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code,
+          store_id: storeId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.message || '쿠폰 사용에 실패했습니다.');
+        return;
+      }
+
+      // 사용 완료 페이지로 이동
+      router.push(`/store/${storeId}/complete?amount=${data.total_amount}`);
+    } catch (error) {
+      console.error('Coupon validation error:', error);
+      setError('네트워크 오류가 발생했습니다.');
+    }
+  };
+
+  const handleStartScan = () => {
+    setError('');
+    setScanning(true);
+  };
+
+  const handleStopScan = () => {
+    setScanning(false);
+  };
+
+  if (!storeName) {
+    return <Loading fullScreen />;
+  }
+
+  return (
+    <main className="min-h-screen bg-background py-8 px-4">
+      <div className="max-w-2xl mx-auto space-y-6">
+        <Card>
+          <div className="text-center space-y-4 mb-6">
+            <h1 className="text-2xl font-bold text-textPrimary">
+              {storeName}
+            </h1>
+            <p className="text-textSecondary">
+              고객의 쿠폰 QR 코드를 스캔해주세요
+            </p>
+          </div>
+
+          {error && (
+            <div className="bg-red-50 border border-error rounded-lg p-4 mb-6">
+              <p className="text-error font-medium">⚠️ {error}</p>
+            </div>
+          )}
+
+          {!scanning && (
+            <div className="space-y-4">
+              <Button onClick={handleStartScan} fullWidth size="lg">
+                📷 QR 코드 스캔 시작
+              </Button>
+              
+              <Button
+                onClick={() => router.push(`/store/${storeId}/manual`)}
+                variant="outline"
+                fullWidth
+              >
+                숫자 코드로 입력하기
+              </Button>
+            </div>
+          )}
+
+          {scanning && (
+            <div className="space-y-4">
+              <div id="qr-reader" className="w-full"></div>
+              
+              <Button
+                onClick={handleStopScan}
+                variant="outline"
+                fullWidth
+              >
+                스캔 중지
+              </Button>
+            </div>
+          )}
+
+          <div className="mt-8 pt-6 border-t border-border text-sm text-textSecondary space-y-2">
+            <p className="font-semibold text-textPrimary">
+              💡 사용 안내
+            </p>
+            <ul className="list-disc list-inside space-y-1">
+              <li>고객의 쿠폰 QR 코드를 카메라에 비춰주세요</li>
+              <li>QR 스캔이 안 되면 숫자 코드를 직접 입력하세요</li>
+              <li>쿠폰당 500원 할인이 적용됩니다</li>
+              <li>사용된 쿠폰은 재사용할 수 없습니다</li>
+            </ul>
+          </div>
+        </Card>
+      </div>
+    </main>
+  );
+}
+
