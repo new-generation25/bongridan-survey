@@ -53,9 +53,39 @@ export const supabaseHelpers = {
     }
   },
 
-  // 쿠폰 코드 생성 (6자리 숫자)
-  generateCouponCode(): string {
-    return Math.floor(100000 + Math.random() * 900000).toString();
+  // 쿠폰 코드 생성 (6자리 순차 번호)
+  async generateCouponCode(): Promise<string> {
+    try {
+      // 마지막 쿠폰 코드 조회
+      const { data: lastCoupon, error } = await supabaseAdmin
+        .from('coupons')
+        .select('code')
+        .order('code', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Get last coupon code error:', error);
+        // 에러 발생 시 000001부터 시작
+        return '000001';
+      }
+
+      if (!lastCoupon || !lastCoupon.code) {
+        // 첫 번째 쿠폰
+        return '000001';
+      }
+
+      // 마지막 코드 + 1
+      const lastCode = parseInt(lastCoupon.code, 10);
+      const nextCode = lastCode + 1;
+
+      // 6자리 형식으로 변환 (000001, 000002, ...)
+      return nextCode.toString().padStart(6, '0');
+    } catch (error) {
+      console.error('Generate coupon code error:', error);
+      // 에러 발생 시 000001부터 시작
+      return '000001';
+    }
   },
 
   // 쿠폰 만료 시간 계산

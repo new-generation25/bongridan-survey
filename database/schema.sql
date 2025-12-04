@@ -5,7 +5,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- 1. stores (가맹점) - 다른 테이블이 참조하므로 먼저 생성
 CREATE TABLE stores (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id VARCHAR(2) PRIMARY KEY,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   
   name VARCHAR(100) NOT NULL,
@@ -60,7 +60,7 @@ CREATE TABLE coupons (
   issued_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
   used_at TIMESTAMP WITH TIME ZONE,
-  used_store_id UUID REFERENCES stores(id),
+  used_store_id VARCHAR(2) REFERENCES stores(id),
   
   CONSTRAINT valid_status CHECK (status IN ('issued', 'used', 'expired'))
 );
@@ -74,7 +74,7 @@ CREATE TABLE settlements (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   
-  store_id UUID REFERENCES stores(id) NOT NULL,
+  store_id VARCHAR(2) REFERENCES stores(id) NOT NULL,
   amount INTEGER NOT NULL,
   note TEXT,
   settled_by VARCHAR(50)
@@ -113,11 +113,11 @@ INSERT INTO settings (key, value) VALUES
   ('admin_password', 'change_this_password_in_production');
 
 -- 7. 가맹점 초기 데이터 (24개)
-INSERT INTO stores (name) VALUES
-  ('너글스'), ('퐁세'), ('카츠타다이'), ('토그커피샵'),
-  ('왓포식당'), ('공원반점'), ('덴웨스'), ('니치니치'),
-  ('봉황1935'), ('희유'), ('하루담'), ('미야상회'),
-  ('서부커피'), ('오히루텐'), ('초이블리'), ('호우오우'),
-  ('씅카츠'), ('카페탱자'), ('올던하우스'), ('샤브샵'),
-  ('해온정'), ('사계'), ('밤비공기'), ('밀집');
+INSERT INTO stores (id, name) VALUES
+  ('01', '너글스'), ('02', '퐁세'), ('03', '카츠타다이'), ('04', '토그커피샵'),
+  ('05', '왓포식당'), ('06', '공원반점'), ('07', '덴웨스'), ('08', '니치니치'),
+  ('09', '봉황1935'), ('10', '희유'), ('11', '하루담'), ('12', '미야상회'),
+  ('13', '서부커피'), ('14', '오히루텐'), ('15', '초이블리'), ('16', '호우오우'),
+  ('17', '씅카츠'), ('18', '카페탱자'), ('19', '올던하우스'), ('20', '샤브샵'),
+  ('21', '해온정'), ('22', '사계'), ('23', '밤비공기'), ('24', '밀집');
 

@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 쿠폰 생성
-    const couponCode = supabaseHelpers.generateCouponCode();
+    const couponCode = await supabaseHelpers.generateCouponCode();
     const expiresAt = supabaseHelpers.calculateExpiryDate(COUPON_CONFIG.VALIDITY_HOURS);
 
     const { data: coupon, error: couponError } = await supabaseAdmin
