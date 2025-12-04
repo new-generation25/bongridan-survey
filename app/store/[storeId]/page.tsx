@@ -153,11 +153,17 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       // 성공 시 스캔된 쿠폰에 추가
       scannedCouponsRef.current.add(code);
 
+      // 성공 시 에러 메시지와 타임아웃 확실히 제거
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+        errorTimeoutRef.current = null;
+      }
+      setError(''); // 성공 시 에러 메시지 제거
+
       // 누적 금액 업데이트 (카메라 유지)
       const addedAmount = data.total_amount || 500;
       setTotalAmount((prev) => prev + addedAmount);
       setScanCount((prev) => prev + 1);
-      setError(''); // 성공 시 에러 메시지 제거
       
       // 성공 플래시 효과 (검정색 깜박임 + 500원 적립 효과)
       setFlashAmount(addedAmount);
@@ -195,6 +201,11 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
     }
 
     setIsProcessing(true);
+    // 이전 에러 메시지와 타임아웃 정리
+    if (errorTimeoutRef.current) {
+      clearTimeout(errorTimeoutRef.current);
+      errorTimeoutRef.current = null;
+    }
     setError(''); // 처리 시작 시 에러 메시지 제거
 
     try {
@@ -255,6 +266,13 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         // 카메라는 유지 (setScanning 호출하지 않음)
         return false;
       }
+
+      // validate 성공 시 에러 메시지 확실히 제거
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+        errorTimeoutRef.current = null;
+      }
+      setError('');
 
       // 처리 딜레이 (500ms)
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -346,11 +364,17 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       // 성공 시 스캔된 쿠폰에 추가
       scannedCouponsRef.current.add(couponId);
 
+      // 성공 시 에러 메시지와 타임아웃 확실히 제거
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+        errorTimeoutRef.current = null;
+      }
+      setError(''); // 성공 시 에러 메시지 제거
+
       // 누적 금액 업데이트 (카메라 유지)
       const addedAmount = data.total_amount || 500;
       setTotalAmount((prev) => prev + addedAmount);
       setScanCount((prev) => prev + 1);
-      setError(''); // 성공 시 에러 메시지 제거
       
       // 성공 플래시 효과 (검정색 깜박임 + 500원 적립 효과)
       setFlashAmount(addedAmount);
