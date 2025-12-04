@@ -187,12 +187,21 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       // 성공 시 스캔된 쿠폰에 추가
       scannedCouponsRef.current.add(code);
 
-      // 성공 시 에러 메시지와 타임아웃 확실히 제거
+      // 성공 시 에러 메시지와 타임아웃 확실히 제거 (즉시, 여러 번 확인)
       if (errorTimeoutRef.current) {
         clearTimeout(errorTimeoutRef.current);
         errorTimeoutRef.current = null;
       }
-      setError(''); // 성공 시 에러 메시지 제거
+      setError(''); // 성공 시 에러 메시지 즉시 제거
+      
+      // 추가 확인: 성공 후에도 에러 메시지가 없는지 다시 확인
+      setTimeout(() => {
+        if (errorTimeoutRef.current) {
+          clearTimeout(errorTimeoutRef.current);
+          errorTimeoutRef.current = null;
+        }
+        setError('');
+      }, 0);
 
       // 누적 금액 업데이트 (카메라 유지)
       // API의 total_amount는 단일 쿠폰 금액이므로 500원 사용
@@ -309,6 +318,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       }
 
       // validate 성공 시 에러 메시지 즉시 제거 (use API 호출 전)
+      // 이전에 설정된 모든 에러 메시지와 타임아웃을 확실히 제거
       if (errorTimeoutRef.current) {
         clearTimeout(errorTimeoutRef.current);
         errorTimeoutRef.current = null;
@@ -316,7 +326,22 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       setError(''); // 에러 메시지 즉시 제거
 
       // 처리 딜레이 (500ms) - 이 시간 동안 에러 메시지가 나타나지 않도록
+      // 딜레이 중에도 에러 메시지가 설정되지 않도록 보장
       await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // 딜레이 후에도 에러 메시지가 없는지 다시 확인
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+        errorTimeoutRef.current = null;
+      }
+      setError(''); // 딜레이 후에도 에러 메시지 제거
+
+      // use API 호출 직전에 에러 메시지와 타임아웃을 다시 한 번 확실히 제거
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+        errorTimeoutRef.current = null;
+      }
+      setError(''); // use API 호출 직전 에러 메시지 제거
 
       // 쿠폰 사용 처리
       const response = await fetch('/api/coupon/use', {
@@ -405,12 +430,21 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       // 성공 시 스캔된 쿠폰에 추가
       scannedCouponsRef.current.add(couponId);
 
-      // 성공 시 에러 메시지와 타임아웃 확실히 제거
+      // 성공 시 에러 메시지와 타임아웃 확실히 제거 (즉시, 여러 번 확인)
       if (errorTimeoutRef.current) {
         clearTimeout(errorTimeoutRef.current);
         errorTimeoutRef.current = null;
       }
-      setError(''); // 성공 시 에러 메시지 제거
+      setError(''); // 성공 시 에러 메시지 즉시 제거
+      
+      // 추가 확인: 성공 후에도 에러 메시지가 없는지 다시 확인
+      setTimeout(() => {
+        if (errorTimeoutRef.current) {
+          clearTimeout(errorTimeoutRef.current);
+          errorTimeoutRef.current = null;
+        }
+        setError('');
+      }, 0);
 
       // 누적 금액 업데이트 (카메라 유지)
       // API의 total_amount는 단일 쿠폰 금액이므로 500원 사용
@@ -586,7 +620,11 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       // 통계 업데이트 (카메라는 유지)
       if (totalAmount > 0 && storeId) {
         // 통계만 업데이트하고 카메라는 유지
-        fetchStoreStats(storeId);
+        try {
+          await fetchStoreStats(storeId);
+        } catch (statsError) {
+          console.error('Fetch stats error in handleStopScan:', statsError);
+        }
         // 상태 리셋
         setTotalAmount(0);
         setScanCount(0);
