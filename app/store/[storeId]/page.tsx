@@ -13,6 +13,8 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
   const [storeId, setStoreId] = useState('');
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState('');
+  const [totalAmount, setTotalAmount] = useState(0);
+  const [scanCount, setScanCount] = useState(0);
   const qrCodeRef = useRef<Html5Qrcode | null>(null);
 
   useEffect(() => {
@@ -56,18 +58,20 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
 
       if (!response.ok) {
         setError(data.message || '쿠폰 사용에 실패했습니다.');
-        setScanning(false);
-        return;
+        return false;
       }
 
-      // 사용 완료 페이지로 이동
-      router.push(`/store/${storeId}/complete?amount=${data.total_amount}`);
+      // 누적 금액 업데이트 (카메라 유지)
+      setTotalAmount((prev) => prev + (data.total_amount || 500));
+      setScanCount((prev) => prev + 1);
+      setError(''); // 성공 시 에러 메시지 제거
+      return true;
     } catch (error) {
       console.error('Coupon validation error:', error);
       setError('네트워크 오류가 발생했습니다.');
-      setScanning(false);
+      return false;
     }
-  }, [storeId, router]);
+  }, [storeId]);
 
   const handleCouponValidationById = useCallback(async (couponId: string) => {
     try {
@@ -77,8 +81,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
 
       if (!validateResponse.ok || !validateData.valid) {
         setError(validateData.message || '유효하지 않은 쿠폰입니다.');
-        setScanning(false);
-        return;
+        return false;
       }
 
       // 쿠폰 사용 처리
@@ -95,18 +98,20 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
 
       if (!response.ok) {
         setError(data.message || '쿠폰 사용에 실패했습니다.');
-        setScanning(false);
-        return;
+        return false;
       }
 
-      // 사용 완료 페이지로 이동
-      router.push(`/store/${storeId}/complete?amount=${data.total_amount}`);
+      // 누적 금액 업데이트 (카메라 유지)
+      setTotalAmount((prev) => prev + (data.total_amount || 500));
+      setScanCount((prev) => prev + 1);
+      setError(''); // 성공 시 에러 메시지 제거
+      return true;
     } catch (error) {
       console.error('Coupon validation error:', error);
       setError('네트워크 오류가 발생했습니다.');
-      setScanning(false);
+      return false;
     }
-  }, [storeId, router]);
+  }, [storeId]);
 
   useEffect(() => {
     // storeId가 설정되면 자동으로 스캔 시작
@@ -162,11 +167,8 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
           },
           async (decodedText) => {
             try {
-              // QR 코드 스캔 성공
-              if (scanner) {
-                await scanner.stop().catch(console.error);
-              }
-              setScanning(false);
+              // QR 코드 스캔 성공 - 카메라는 계속 유지
+              // 스캐너를 멈추지 않고 계속 스캔 가능하도록 유지
               
               // URL 형식인지 확인 (https://도메인/api/coupon/validate?id=xxx)
               let couponId: string | null = null;
@@ -196,12 +198,10 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
                 await handleCouponValidationById(couponId);
               } else {
                 setError('유효하지 않은 QR 코드입니다.');
-                setScanning(false);
               }
             } catch (error) {
               console.error('QR scan callback error:', error);
               setError('QR 코드 처리 중 오류가 발생했습니다.');
-              setScanning(false);
             }
           },
           (error) => {
@@ -278,6 +278,21 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
           {scanning && (
             <div className="space-y-4">
               <div id="qr-reader" className="w-full"></div>
+              
+              {/* 누적 금액 표시 */}
+              {(totalAmount > 0 || scanCount > 0) && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                  <p className="text-sm text-green-700 mb-1">적립 완료</p>
+                  <p className="text-2xl font-bold text-green-800">
+                    쿠폰 금액: {totalAmount.toLocaleString()}원
+                  </p>
+                  {scanCount > 0 && (
+                    <p className="text-xs text-green-600 mt-1">
+                      ({scanCount}개 쿠폰 사용)
+                    </p>
+                  )}
+                </div>
+              )}
               
               <Button
                 onClick={handleStopScan}
