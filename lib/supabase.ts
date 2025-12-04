@@ -12,6 +12,14 @@ export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
   auth: {
     autoRefreshToken: false,
     persistSession: false
+  },
+  db: {
+    schema: 'public'
+  },
+  global: {
+    headers: {
+      'x-client-info': 'bongridan-survey'
+    }
   }
 });
 
@@ -23,11 +31,13 @@ export const supabaseHelpers = {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
+      // 인덱스를 활용한 최적화된 쿼리
       const { data, error } = await supabaseAdmin
         .from('surveys')
-        .select('id')
+        .select('id', { count: 'exact', head: false })
         .eq('device_id', deviceId)
         .gte('created_at', today.toISOString())
+        .limit(1)
         .maybeSingle();
 
       if (error && error.code !== 'PGRST116') {
