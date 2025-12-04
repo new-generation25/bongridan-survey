@@ -79,7 +79,7 @@ export default function CouponPage({ params }: { params: Promise<{ id: string }>
                 500원 할인 쿠폰
               </p>
               <p className="text-sm text-textSecondary">
-                제출을 하면 500원이 적립되고, 추가설문에 응답하면 더 좋은 보상을 추첨하여 제공합니다
+                제출을 하면 500원을 바로 할인 받을 수 있고, 추가설문에 응답하면 더 좋은 보상을 추첨하여 제공합니다.
               </p>
             </div>
 
@@ -111,7 +111,7 @@ export default function CouponPage({ params }: { params: Promise<{ id: string }>
                 {coupon.code}
               </p>
               <p className="text-xs text-textSecondary">
-                QR 스캔이 안 될 경우 이 번호를 알려주세요
+                
               </p>
             </div>
 

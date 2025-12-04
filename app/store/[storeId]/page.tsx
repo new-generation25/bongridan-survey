@@ -34,14 +34,17 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
     const fetchStore = async () => {
       try {
         const resolvedParams = await params;
-        setStoreId(resolvedParams.storeId);
+        const storeIdValue = resolvedParams.storeId;
+        setStoreId(storeIdValue);
         const response = await fetch('/api/stores');
         const data = await response.json();
         
         if (data.success && data.stores) {
-          const store = data.stores.find((s: { id: string; name: string }) => s.id === resolvedParams.storeId);
+          const store = data.stores.find((s: { id: string; name: string }) => s.id === storeIdValue);
           if (store) {
             setStoreName(store.name);
+            // 스토어 정보 로드 후 통계 조회
+            fetchStoreStats(storeIdValue);
           } else {
             alert('존재하지 않는 가맹점입니다.');
             router.push('/');
@@ -54,6 +57,26 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
 
     fetchStore();
   }, [params, router]);
+
+  // 통계 조회 함수
+  const fetchStoreStats = useCallback(async (storeIdValue: string) => {
+    try {
+      const response = await fetch(`/api/store/${storeIdValue}/stats`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setStoreStats({
+            today_count: data.today_count || 0,
+            today_amount: data.today_amount || 0,
+            total_count: data.total_count || 0,
+            total_amount: data.total_amount || 0,
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Fetch stats error:', error);
+    }
+  }, []);
 
   const handleCouponValidation = useCallback(async (code: string) => {
     // 중복 스캔 체크
