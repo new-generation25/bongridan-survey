@@ -61,6 +61,11 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
     }
 
     setIsProcessing(true);
+    // 이전 에러 메시지와 타임아웃 정리
+    if (errorTimeoutRef.current) {
+      clearTimeout(errorTimeoutRef.current);
+      errorTimeoutRef.current = null;
+    }
     setError(''); // 처리 시작 시 에러 메시지 제거
     
     try {
