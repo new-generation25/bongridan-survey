@@ -55,22 +55,30 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
     setIsProcessing(true);
     
     try {
-      // 스캔 성공 피드백 (찰칵 효과)
-      const audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-      
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      
-      oscillator.frequency.value = 800;
-      oscillator.type = 'sine';
-      
-      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
-      
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.1);
+      // 스캔 성공 피드백 (찰칵 효과) - 안전하게 처리
+      try {
+        const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        if (AudioContextClass) {
+          const audioContext = new AudioContextClass();
+          const oscillator = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
+          
+          oscillator.connect(gainNode);
+          gainNode.connect(audioContext.destination);
+          
+          oscillator.frequency.value = 800;
+          oscillator.type = 'sine';
+          
+          gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+          
+          oscillator.start(audioContext.currentTime);
+          oscillator.stop(audioContext.currentTime + 0.1);
+        }
+      } catch (audioError) {
+        // 오디오 에러는 무시하고 계속 진행
+        console.log('Audio feedback error:', audioError);
+      }
 
       // 처리 딜레이 (500ms)
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -135,22 +143,30 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         return false;
       }
 
-      // 스캔 성공 피드백 (찰칵 효과)
-      const audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-      
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      
-      oscillator.frequency.value = 800;
-      oscillator.type = 'sine';
-      
-      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
-      
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.1);
+      // 스캔 성공 피드백 (찰칵 효과) - 안전하게 처리
+      try {
+        const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        if (AudioContextClass) {
+          const audioContext = new AudioContextClass();
+          const oscillator = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
+          
+          oscillator.connect(gainNode);
+          gainNode.connect(audioContext.destination);
+          
+          oscillator.frequency.value = 800;
+          oscillator.type = 'sine';
+          
+          gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+          
+          oscillator.start(audioContext.currentTime);
+          oscillator.stop(audioContext.currentTime + 0.1);
+        }
+      } catch (audioError) {
+        // 오디오 에러는 무시하고 계속 진행
+        console.log('Audio feedback error:', audioError);
+      }
 
       // 처리 딜레이 (500ms)
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -312,7 +328,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         scanner.clear();
       }
     };
-  }, [scanning, storeId, storeName, router, handleCouponValidation, handleCouponValidationById, isProcessing]);
+  }, [scanning, storeId, storeName, router, handleCouponValidation, handleCouponValidationById]);
 
 
   const handleStartScan = () => {
