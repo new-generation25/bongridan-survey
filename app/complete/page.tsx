@@ -1,11 +1,50 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
+import Loading from '@/components/ui/Loading';
+import { storage } from '@/lib/utils';
 
 export default function CompletePage() {
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [couponId, setCouponId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadCouponId = async () => {
+      try {
+        // 먼저 localStorage에서 쿠폰 ID 확인
+        let id = localStorage.getItem('last_coupon_id') || storage.get<string>('coupon_id');
+        
+        // 쿠폰 ID가 없으면 survey_id로 쿠폰 조회
+        if (!id) {
+          const surveyId = storage.get<string>('survey_id');
+          if (surveyId) {
+            const response = await fetch(`/api/coupon/by-survey/${surveyId}`);
+            const data = await response.json();
+            if (data.success && data.coupon) {
+              id = data.coupon.id;
+              localStorage.setItem('last_coupon_id', id);
+            }
+          }
+        }
+        
+        setCouponId(id);
+      } catch (error) {
+        console.error('Load coupon ID error:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadCouponId();
+  }, []);
+
+  if (loading) {
+    return <Loading fullScreen text="쿠폰 정보를 불러오는 중입니다..." />;
+  }
 
   return (
     <main className="min-h-screen bg-background py-8 px-4">
@@ -35,21 +74,16 @@ export default function CompletePage() {
             <div className="space-y-3 pt-4">
               <Button
                 onClick={() => {
-                  try {
-                    const couponId = localStorage.getItem('last_coupon_id');
-                    if (couponId) {
-                      // couponId는 이미 문자열이므로 JSON.parse 불필요
-                      router.push(`/coupon/${couponId}`);
-                    } else {
-                      router.push('/');
-                    }
-                  } catch (error) {
-                    console.error('Get coupon ID error:', error);
+                  if (couponId) {
+                    router.push(`/coupon/${couponId}`);
+                  } else {
+                    alert('쿠폰 정보를 찾을 수 없습니다.');
                     router.push('/');
                   }
                 }}
                 fullWidth
                 size="lg"
+                disabled={!couponId}
               >
                 내 쿠폰 보기
               </Button>
