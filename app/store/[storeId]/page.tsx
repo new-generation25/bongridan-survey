@@ -159,9 +159,13 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       setScanCount((prev) => prev + 1);
       setError(''); // 성공 시 에러 메시지 제거
       
-      // 성공 플래시 효과
+      // 성공 플래시 효과 (검정색 깜박임 + 500원 적립 효과)
+      setFlashAmount(addedAmount);
       setShowSuccessFlash(true);
-      setTimeout(() => setShowSuccessFlash(false), 1000);
+      setTimeout(() => {
+        setShowSuccessFlash(false);
+        setFlashAmount(0);
+      }, 800);
       
       setIsProcessing(false);
       return true;
