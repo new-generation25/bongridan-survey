@@ -198,15 +198,26 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       setScanCount((prev) => prev + 1);
       setError(''); // 성공 시 에러 메시지 제거
       
-      // 성공 플래시 효과
+      // 성공 플래시 효과 (검정색 깜박임 + 500원 적립 효과)
+      setFlashAmount(addedAmount);
       setShowSuccessFlash(true);
-      setTimeout(() => setShowSuccessFlash(false), 1000);
+      setTimeout(() => {
+        setShowSuccessFlash(false);
+        setFlashAmount(0);
+      }, 800);
       
       setIsProcessing(false);
       return true;
     } catch (error) {
       console.error('Coupon validation error:', error);
-      setError('네트워크 오류가 발생했습니다.');
+      // 에러 타입에 따라 다른 메시지 표시
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        setError('네트워크 연결을 확인해주세요.');
+      } else if (error instanceof Error) {
+        setError(`오류: ${error.message}`);
+      } else {
+        setError('쿠폰 처리 중 오류가 발생했습니다.');
+      }
       setIsProcessing(false);
       return false;
     }
