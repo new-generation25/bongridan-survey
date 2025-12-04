@@ -169,7 +169,11 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Dashboard error:', error);
     return NextResponse.json(
-      { success: false, message: ERROR_MESSAGES.INTERNAL_ERROR },
+      { 
+        success: false, 
+        message: ERROR_MESSAGES.INTERNAL_ERROR,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }

@@ -37,12 +37,18 @@ export default function AdminDashboardPage() {
             router.push('/admin');
             return;
           }
+          // 500 오류 등 다른 오류 처리
+          const errorMessage = result.message || result.error || '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+          alert(errorMessage);
+          setLoading(false);
+          return;
         }
 
         if (result.success && result.data) {
           setData(result.data);
         } else {
-          alert('데이터를 불러오는데 실패했습니다.');
+          const errorMessage = result.message || '데이터를 불러오는데 실패했습니다.';
+          alert(errorMessage);
         }
       } catch (error) {
         console.error('Fetch dashboard error:', error);

@@ -19,13 +19,30 @@ export async function verifyAdminToken(request: NextRequest): Promise<boolean> {
     // 간단한 토큰 검증 (실제로는 JWT 검증 권장)
     // 토큰 형식: base64('admin:timestamp')
     try {
-      const decoded = Buffer.from(token, 'base64').toString('utf-8');
+      // Node.js 환경에서 Buffer 사용, 브라우저에서는 atob 사용
+      let decoded: string;
+      if (typeof Buffer !== 'undefined') {
+        decoded = Buffer.from(token, 'base64').toString('utf-8');
+      } else {
+        // Edge Runtime 환경에서 atob 사용
+        decoded = atob(token);
+      }
+      
       if (!decoded.startsWith('admin:')) {
         return false;
       }
       
       // 토큰이 최근 24시간 이내에 생성되었는지 확인
-      const timestamp = parseInt(decoded.split(':')[1]);
+      const timestampStr = decoded.split(':')[1];
+      if (!timestampStr) {
+        return false;
+      }
+      
+      const timestamp = parseInt(timestampStr, 10);
+      if (isNaN(timestamp)) {
+        return false;
+      }
+      
       const now = Date.now();
       const tokenAge = now - timestamp;
       const maxAge = 24 * 60 * 60 * 1000; // 24시간
@@ -35,7 +52,8 @@ export async function verifyAdminToken(request: NextRequest): Promise<boolean> {
       }
 
       return true;
-    } catch {
+    } catch (error) {
+      console.error('Token verification error:', error);
       return false;
     }
   } catch {

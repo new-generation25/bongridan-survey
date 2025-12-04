@@ -36,7 +36,15 @@ export async function POST(request: NextRequest) {
     }
 
     // 간단한 토큰 생성 (실제로는 JWT 사용 권장)
-    const token = Buffer.from(`admin:${Date.now()}`).toString('base64');
+    // Node.js 환경에서 Buffer 사용, Edge Runtime에서는 btoa 사용
+    const tokenData = `admin:${Date.now()}`;
+    let token: string;
+    if (typeof Buffer !== 'undefined') {
+      token = Buffer.from(tokenData).toString('base64');
+    } else {
+      // Edge Runtime 환경에서 btoa 사용
+      token = btoa(tokenData);
+    }
 
     return NextResponse.json({
       success: true,
