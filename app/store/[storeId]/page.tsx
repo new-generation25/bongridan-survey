@@ -16,6 +16,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
   const [totalAmount, setTotalAmount] = useState(0);
   const [scanCount, setScanCount] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showSuccessFlash, setShowSuccessFlash] = useState(false);
   const scannedCouponsRef = useRef<Set<string>>(new Set());
   const qrCodeRef = useRef<Html5Qrcode | null>(null);
 
@@ -55,31 +56,6 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
     setIsProcessing(true);
     
     try {
-      // 스캔 성공 피드백 (찰칵 효과) - 안전하게 처리
-      try {
-        const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-        if (AudioContextClass) {
-          const audioContext = new AudioContextClass();
-          const oscillator = audioContext.createOscillator();
-          const gainNode = audioContext.createGain();
-          
-          oscillator.connect(gainNode);
-          gainNode.connect(audioContext.destination);
-          
-          oscillator.frequency.value = 800;
-          oscillator.type = 'sine';
-          
-          gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
-          
-          oscillator.start(audioContext.currentTime);
-          oscillator.stop(audioContext.currentTime + 0.1);
-        }
-      } catch (audioError) {
-        // 오디오 에러는 무시하고 계속 진행
-        console.log('Audio feedback error:', audioError);
-      }
-
       // 처리 딜레이 (500ms)
       await new Promise(resolve => setTimeout(resolve, 500));
 
@@ -110,9 +86,15 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       scannedCouponsRef.current.add(code);
 
       // 누적 금액 업데이트 (카메라 유지)
-      setTotalAmount((prev) => prev + (data.total_amount || 500));
+      const addedAmount = data.total_amount || 500;
+      setTotalAmount((prev) => prev + addedAmount);
       setScanCount((prev) => prev + 1);
       setError(''); // 성공 시 에러 메시지 제거
+      
+      // 성공 플래시 효과
+      setShowSuccessFlash(true);
+      setTimeout(() => setShowSuccessFlash(false), 1000);
+      
       setIsProcessing(false);
       return true;
     } catch (error) {
@@ -141,31 +123,6 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         setError(validateData.message || '유효하지 않은 쿠폰입니다.');
         setIsProcessing(false);
         return false;
-      }
-
-      // 스캔 성공 피드백 (찰칵 효과) - 안전하게 처리
-      try {
-        const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-        if (AudioContextClass) {
-          const audioContext = new AudioContextClass();
-          const oscillator = audioContext.createOscillator();
-          const gainNode = audioContext.createGain();
-          
-          oscillator.connect(gainNode);
-          gainNode.connect(audioContext.destination);
-          
-          oscillator.frequency.value = 800;
-          oscillator.type = 'sine';
-          
-          gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
-          
-          oscillator.start(audioContext.currentTime);
-          oscillator.stop(audioContext.currentTime + 0.1);
-        }
-      } catch (audioError) {
-        // 오디오 에러는 무시하고 계속 진행
-        console.log('Audio feedback error:', audioError);
       }
 
       // 처리 딜레이 (500ms)
@@ -199,9 +156,15 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       scannedCouponsRef.current.add(couponId);
 
       // 누적 금액 업데이트 (카메라 유지)
-      setTotalAmount((prev) => prev + (data.total_amount || 500));
+      const addedAmount = data.total_amount || 500;
+      setTotalAmount((prev) => prev + addedAmount);
       setScanCount((prev) => prev + 1);
       setError(''); // 성공 시 에러 메시지 제거
+      
+      // 성공 플래시 효과
+      setShowSuccessFlash(true);
+      setTimeout(() => setShowSuccessFlash(false), 1000);
+      
       setIsProcessing(false);
       return true;
     } catch (error) {
@@ -381,21 +344,12 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
 
           {scanning && (
             <div className="space-y-4">
-              {/* 처리 중 표시 */}
-              {isProcessing && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
-                  <p className="text-blue-700 font-medium">적립 처리 중...</p>
-                </div>
-              )}
-
-              <div id="qr-reader" className="w-full"></div>
-              
-              {/* 누적 금액 표시 */}
+              {/* 적립 금액 표시 (카메라 위쪽) */}
               {(totalAmount > 0 || scanCount > 0) && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-                  <p className="text-sm text-green-700 mb-1">적립 완료</p>
-                  <p className="text-2xl font-bold text-green-800">
-                    쿠폰 금액: {totalAmount.toLocaleString()}원
+                <div className="bg-green-50 border-2 border-green-300 rounded-lg p-4 text-center shadow-lg">
+                  <p className="text-sm text-green-700 mb-1">총 적립 금액</p>
+                  <p className="text-3xl font-bold text-green-800">
+                    {totalAmount.toLocaleString()}원
                   </p>
                   {scanCount > 0 && (
                     <p className="text-xs text-green-600 mt-1">
@@ -404,6 +358,34 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
                   )}
                 </div>
               )}
+
+              {/* 처리 중 표시 */}
+              {isProcessing && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
+                  <p className="text-blue-700 font-medium">적립 처리 중...</p>
+                </div>
+              )}
+
+              {/* 성공 플래시 효과 */}
+              {showSuccessFlash && (
+                <div className="fixed inset-0 bg-green-400 bg-opacity-50 z-50 flex items-center justify-center pointer-events-none animate-pulse">
+                  <div className="bg-white rounded-lg p-8 shadow-2xl transform scale-110">
+                    <p className="text-4xl font-bold text-green-600 text-center">✓</p>
+                    <p className="text-xl font-bold text-green-700 mt-2 text-center">적립 완료!</p>
+                  </div>
+                </div>
+              )}
+
+              <div id="qr-reader" className="w-full relative">
+                {/* QR 스캔 영역 위에 오버레이 */}
+                {showSuccessFlash && (
+                  <div className="absolute inset-0 bg-green-400 bg-opacity-30 z-10 rounded-lg flex items-center justify-center pointer-events-none">
+                    <div className="bg-white rounded-full p-4 shadow-lg">
+                      <p className="text-3xl">✓</p>
+                    </div>
+                  </div>
+                )}
+              </div>
               
               <Button
                 onClick={handleStopScan}
