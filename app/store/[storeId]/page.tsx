@@ -161,40 +161,46 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
             },
           },
           async (decodedText) => {
-            // QR 코드 스캔 성공
-            if (scanner) {
-              await scanner.stop().catch(console.error);
-            }
-            setScanning(false);
-            
-            // URL 형식인지 확인 (https://도메인/api/coupon/validate?id=xxx)
-            let couponId: string | null = null;
-            if (decodedText.includes('/api/coupon/validate?id=')) {
-              try {
-                // 절대 URL인 경우
-                if (decodedText.startsWith('http://') || decodedText.startsWith('https://')) {
-                  const url = new URL(decodedText);
-                  couponId = url.searchParams.get('id');
-                } else {
-                  // 상대 URL인 경우
-                  const url = new URL(decodedText, window.location.origin);
-                  couponId = url.searchParams.get('id');
+            try {
+              // QR 코드 스캔 성공
+              if (scanner) {
+                await scanner.stop().catch(console.error);
+              }
+              setScanning(false);
+              
+              // URL 형식인지 확인 (https://도메인/api/coupon/validate?id=xxx)
+              let couponId: string | null = null;
+              if (decodedText.includes('/api/coupon/validate?id=')) {
+                try {
+                  // 절대 URL인 경우
+                  if (decodedText.startsWith('http://') || decodedText.startsWith('https://')) {
+                    const url = new URL(decodedText);
+                    couponId = url.searchParams.get('id');
+                  } else {
+                    // 상대 URL인 경우
+                    const url = new URL(decodedText, window.location.origin);
+                    couponId = url.searchParams.get('id');
+                  }
+                } catch (e) {
+                  // URL 파싱 실패 시 숫자 코드로 처리
+                  await handleCouponValidation(decodedText);
+                  return;
                 }
-              } catch (e) {
-                // URL 파싱 실패 시 숫자 코드로 처리
+              } else {
+                // 숫자 코드인 경우 (기존 방식 호환)
                 await handleCouponValidation(decodedText);
                 return;
               }
-            } else {
-              // 숫자 코드인 경우 (기존 방식 호환)
-              await handleCouponValidation(decodedText);
-              return;
-            }
-            
-            if (couponId) {
-              await handleCouponValidationById(couponId);
-            } else {
-              setError('유효하지 않은 QR 코드입니다.');
+              
+              if (couponId) {
+                await handleCouponValidationById(couponId);
+              } else {
+                setError('유효하지 않은 QR 코드입니다.');
+                setScanning(false);
+              }
+            } catch (error) {
+              console.error('QR scan callback error:', error);
+              setError('QR 코드 처리 중 오류가 발생했습니다.');
               setScanning(false);
             }
           },
