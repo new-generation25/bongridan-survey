@@ -166,7 +166,8 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       setError(''); // 성공 시 에러 메시지 제거
 
       // 누적 금액 업데이트 (카메라 유지)
-      const addedAmount = data.total_amount || 500;
+      // API의 total_amount는 단일 쿠폰 금액이므로 500원 사용
+      const addedAmount = 500;
       setTotalAmount((prev) => prev + addedAmount);
       setScanCount((prev) => prev + 1);
       
@@ -377,7 +378,8 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       setError(''); // 성공 시 에러 메시지 제거
 
       // 누적 금액 업데이트 (카메라 유지)
-      const addedAmount = data.total_amount || 500;
+      // API의 total_amount는 단일 쿠폰 금액이므로 500원 사용
+      const addedAmount = 500;
       setTotalAmount((prev) => prev + addedAmount);
       setScanCount((prev) => prev + 1);
       
@@ -544,8 +546,27 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
     setScanning(true);
   };
 
-  const handleStopScan = () => {
-    setScanning(false);
+  const handleStopScan = async () => {
+    try {
+      // 카메라 정리
+      if (qrCodeRef.current) {
+        try {
+          await qrCodeRef.current.stop();
+        } catch (stopError) {
+          console.error('Stop scanner error:', stopError);
+        }
+        try {
+          qrCodeRef.current.clear();
+        } catch (clearError) {
+          console.error('Clear scanner error:', clearError);
+        }
+        qrCodeRef.current = null;
+      }
+      setScanning(false);
+    } catch (error) {
+      console.error('Stop scan error:', error);
+      setScanning(false);
+    }
   };
 
   if (!storeName) {
@@ -646,10 +667,11 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
               
               <Button
                 onClick={handleStopScan}
-                variant="outline"
+                variant={totalAmount > 0 ? "default" : "outline"}
+                className={totalAmount > 0 ? "bg-green-600 hover:bg-green-700 text-white border-green-600" : ""}
                 fullWidth
               >
-                {totalAmount > 0 ? '적립 완료' : '스캔 중지'}
+                {totalAmount > 0 ? '사용 완료' : '스캔 중지'}
               </Button>
             </div>
           )}
