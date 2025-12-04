@@ -136,10 +136,30 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
     try {
       // 먼저 쿠폰 정보 조회 (상점용 파라미터 추가)
       const validateResponse = await fetch(`/api/coupon/validate?id=${couponId}&store=${storeId}`);
-      const validateData = await validateResponse.json();
+      
+      // 응답이 JSON인지 확인
+      let validateData;
+      try {
+        const text = await validateResponse.text();
+        if (!text) {
+          throw new Error('응답이 비어있습니다');
+        }
+        validateData = JSON.parse(text);
+      } catch (parseError) {
+        console.error('JSON 파싱 오류:', parseError);
+        setError('서버 응답 오류가 발생했습니다.');
+        setIsProcessing(false);
+        return false;
+      }
 
       if (!validateResponse.ok || !validateData.valid) {
-        setError(validateData.message || '유효하지 않은 쿠폰입니다.');
+        const errorMessage = validateData.message || '유효하지 않은 쿠폰입니다.';
+        if (errorMessage.includes('이미 사용') || errorMessage.includes('사용된')) {
+          scannedCouponsRef.current.add(couponId);
+          setError('이미 적립된 쿠폰입니다.');
+        } else {
+          setError(errorMessage);
+        }
         setIsProcessing(false);
         return false;
       }
