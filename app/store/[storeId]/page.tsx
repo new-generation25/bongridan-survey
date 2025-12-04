@@ -265,6 +265,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
 
       if (!validateResponse.ok || !validateData.valid) {
         const errorMessage = validateData.message || '유효하지 않은 쿠폰입니다.';
+        // validate 실패 시 즉시 에러 메시지 설정 및 반환 (use API 호출하지 않음)
         if (errorMessage.includes('이미 사용') || errorMessage.includes('사용된')) {
           scannedCouponsRef.current.add(couponId);
           setError('이미 적립된 쿠폰입니다.');
@@ -280,14 +281,14 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         return false;
       }
 
-      // validate 성공 시 에러 메시지 확실히 제거
+      // validate 성공 시 에러 메시지 즉시 제거 (use API 호출 전)
       if (errorTimeoutRef.current) {
         clearTimeout(errorTimeoutRef.current);
         errorTimeoutRef.current = null;
       }
-      setError('');
+      setError(''); // 에러 메시지 즉시 제거
 
-      // 처리 딜레이 (500ms)
+      // 처리 딜레이 (500ms) - 이 시간 동안 에러 메시지가 나타나지 않도록
       await new Promise(resolve => setTimeout(resolve, 500));
 
       // 쿠폰 사용 처리
