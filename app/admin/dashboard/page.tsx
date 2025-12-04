@@ -23,8 +23,21 @@ export default function AdminDashboardPage() {
 
     const fetchData = async () => {
       try {
-        const response = await fetch('/api/admin/dashboard');
+        const response = await fetch('/api/admin/dashboard', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'x-admin-token': token,
+          },
+        });
         const result = await response.json();
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            storage.remove('admin_token');
+            router.push('/admin');
+            return;
+          }
+        }
 
         if (result.success && result.data) {
           setData(result.data);

@@ -78,10 +78,16 @@ export default function StoresPage() {
           <div className="mt-6 space-y-3">
             <Button
               onClick={() => {
-                const couponId = localStorage.getItem('last_coupon_id');
-                if (couponId) {
-                  router.push(`/coupon/${JSON.parse(couponId)}`);
-                } else {
+                try {
+                  const couponId = localStorage.getItem('last_coupon_id');
+                  if (couponId) {
+                    // couponId는 이미 문자열이므로 JSON.parse 불필요
+                    router.push(`/coupon/${couponId}`);
+                  } else {
+                    router.push('/');
+                  }
+                } catch (error) {
+                  console.error('Get coupon ID error:', error);
                   router.push('/');
                 }
               }}

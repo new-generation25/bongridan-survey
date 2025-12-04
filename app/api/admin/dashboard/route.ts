@@ -1,10 +1,19 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { ERROR_MESSAGES } from '@/lib/constants';
+import { verifyAdminToken } from '@/lib/auth';
 import type { DashboardData } from '@/lib/types';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    // 관리자 토큰 검증
+    const isAuthenticated = await verifyAdminToken(request);
+    if (!isAuthenticated) {
+      return NextResponse.json(
+        { success: false, message: ERROR_MESSAGES.UNAUTHORIZED },
+        { status: 401 }
+      );
+    }
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayISO = today.toISOString();
@@ -101,21 +110,24 @@ export async function GET() {
 
     const byDate = await Promise.all(
       dates.map(async (date) => {
-        const nextDate = new Date(date);
-        nextDate.setDate(nextDate.getDate() + 1);
+        // 날짜 범위를 ISO 타임스탬프 형식으로 변환
+        const startDate = new Date(date);
+        startDate.setHours(0, 0, 0, 0);
+        const endDate = new Date(date);
+        endDate.setHours(23, 59, 59, 999);
 
         const { count: surveys } = await supabaseAdmin
           .from('surveys')
           .select('*', { count: 'exact', head: true })
-          .gte('created_at', date)
-          .lt('created_at', nextDate.toISOString().split('T')[0]);
+          .gte('created_at', startDate.toISOString())
+          .lt('created_at', endDate.toISOString());
 
         const { count: couponsUsed } = await supabaseAdmin
           .from('coupons')
           .select('*', { count: 'exact', head: true })
           .eq('status', 'used')
-          .gte('used_at', date)
-          .lt('used_at', nextDate.toISOString().split('T')[0]);
+          .gte('used_at', startDate.toISOString())
+          .lt('used_at', endDate.toISOString());
 
         return {
           date,
