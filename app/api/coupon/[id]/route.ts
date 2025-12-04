@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 import { ERROR_MESSAGES } from '@/lib/constants';
 
 export async function GET(
@@ -9,13 +9,14 @@ export async function GET(
   try {
     const { id } = await params;
 
-    const { data: coupon, error } = await supabase
+    const { data: coupon, error } = await supabaseAdmin
       .from('coupons')
       .select('*')
       .eq('id', id)
-      .single();
+      .maybeSingle();
 
     if (error || !coupon) {
+      console.error('Get coupon error:', error);
       return NextResponse.json(
         { success: false, message: ERROR_MESSAGES.COUPON_NOT_FOUND },
         { status: 404 }
@@ -29,7 +30,7 @@ export async function GET(
   } catch (error) {
     console.error('Get coupon error:', error);
     return NextResponse.json(
-      { success: false, message: ERROR_MESSAGES.INTERNAL_ERROR },
+      { success: false, message: ERROR_MESSAGES.INTERNAL_ERROR, error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

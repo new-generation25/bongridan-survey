@@ -52,7 +52,12 @@ export async function POST(request: NextRequest) {
     if (surveyError || !survey) {
       console.error('Survey insert error:', surveyError);
       return NextResponse.json(
-        { success: false, message: ERROR_MESSAGES.INTERNAL_ERROR },
+        { 
+          success: false, 
+          message: ERROR_MESSAGES.INTERNAL_ERROR,
+          error: surveyError?.message || 'Unknown error',
+          details: surveyError
+        },
         { status: 500 }
       );
     }
@@ -76,7 +81,12 @@ export async function POST(request: NextRequest) {
     if (couponError || !coupon) {
       console.error('Coupon insert error:', couponError);
       return NextResponse.json(
-        { success: false, message: ERROR_MESSAGES.INTERNAL_ERROR },
+        { 
+          success: false, 
+          message: ERROR_MESSAGES.INTERNAL_ERROR,
+          error: couponError?.message || 'Unknown error',
+          details: couponError
+        },
         { status: 500 }
       );
     }
@@ -90,7 +100,12 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Step1 survey error:', error);
     return NextResponse.json(
-      { success: false, message: ERROR_MESSAGES.INTERNAL_ERROR },
+      { 
+        success: false, 
+        message: ERROR_MESSAGES.INTERNAL_ERROR,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        details: error
+      },
       { status: 500 }
     );
   }

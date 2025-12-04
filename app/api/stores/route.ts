@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 import { ERROR_MESSAGES } from '@/lib/constants';
 
 export async function GET() {
   try {
-    const { data: stores, error } = await supabase
+    const { data: stores, error } = await supabaseAdmin
       .from('stores')
       .select('id, name, is_active')
       .eq('is_active', true)

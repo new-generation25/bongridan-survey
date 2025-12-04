@@ -19,22 +19,28 @@ export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
 export const supabaseHelpers = {
   // 설문 중복 확인 (서버 사이드용)
   async checkDuplicateSurvey(deviceId: string): Promise<boolean> {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
 
-    const { data, error } = await supabaseAdmin
-      .from('surveys')
-      .select('id')
-      .eq('device_id', deviceId)
-      .gte('created_at', today.toISOString())
-      .maybeSingle();
+      const { data, error } = await supabaseAdmin
+        .from('surveys')
+        .select('id')
+        .eq('device_id', deviceId)
+        .gte('created_at', today.toISOString())
+        .maybeSingle();
 
-    if (error && error.code !== 'PGRST116') {
-      console.error('Check duplicate error:', error);
-      throw error;
+      if (error && error.code !== 'PGRST116') {
+        console.error('Check duplicate error:', error);
+        // 에러를 throw하지 않고 false 반환
+        return false;
+      }
+
+      return !!data;
+    } catch (error) {
+      console.error('Check duplicate exception:', error);
+      return false;
     }
-
-    return !!data;
   },
 
   // 쿠폰 코드 생성 (6자리 숫자)
