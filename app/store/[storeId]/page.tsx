@@ -208,13 +208,27 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       let data;
       try {
         const text = await response.text();
+        console.log('Coupon Use API 응답 상태 (by ID):', response.status, response.statusText);
+        console.log('Coupon Use API 응답 내용 (by ID):', text.substring(0, 200));
+        
         if (!text) {
           throw new Error('응답이 비어있습니다');
         }
+        
+        // HTML 응답인지 확인 (리다이렉트 등)
+        if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+          console.error('HTML 응답 받음 (by ID):', text.substring(0, 200));
+          setError('서버 오류가 발생했습니다. (HTML 응답)');
+          setIsProcessing(false);
+          return false;
+        }
+        
         data = JSON.parse(text);
       } catch (parseError) {
-        console.error('JSON 파싱 오류:', parseError);
-        setError('서버 응답 오류가 발생했습니다.');
+        console.error('JSON 파싱 오류 (by ID):', parseError);
+        console.error('응답 상태:', response.status);
+        console.error('응답 헤더:', Object.fromEntries(response.headers.entries()));
+        setError(`서버 응답 오류가 발생했습니다. (상태: ${response.status})`);
         setIsProcessing(false);
         return false;
       }
