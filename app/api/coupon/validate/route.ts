@@ -9,10 +9,8 @@ export async function GET(request: NextRequest) {
     const couponId = searchParams.get('id');
 
     if (!couponId) {
-      return NextResponse.json(
-        { success: false, message: ERROR_MESSAGES.INVALID_REQUEST },
-        { status: 400 }
-      );
+      // 쿠폰 ID가 없으면 홈으로 리다이렉트
+      return NextResponse.redirect(new URL('/', request.url));
     }
 
     // 쿠폰 ID로 쿠폰 정보 조회
@@ -20,36 +18,27 @@ export async function GET(request: NextRequest) {
       .from('coupons')
       .select('*')
       .eq('id', couponId)
-      .single();
+      .maybeSingle();
 
     if (error || !coupon) {
-      return NextResponse.json(
-        { success: false, message: ERROR_MESSAGES.COUPON_NOT_FOUND },
-        { status: 404 }
-      );
+      // 쿠폰을 찾을 수 없으면 홈으로 리다이렉트
+      return NextResponse.redirect(new URL('/', request.url));
     }
 
     // 쿠폰 유효성 검증
     const validation = await supabaseHelpers.validateCoupon(coupon.code);
 
     if (!validation.valid) {
-      return NextResponse.json(
-        { success: false, message: validation.message },
-        { status: 400 }
-      );
+      // 유효하지 않은 쿠폰이면 홈으로 리다이렉트
+      return NextResponse.redirect(new URL('/', request.url));
     }
 
-    return NextResponse.json({
-      success: true,
-      valid: true,
-      coupon: validation.coupon,
-    });
+    // 유효한 쿠폰이면 쿠폰 상세 페이지로 리다이렉트
+    return NextResponse.redirect(new URL(`/coupon/${couponId}`, request.url));
   } catch (error) {
     console.error('Validate coupon error:', error);
-    return NextResponse.json(
-      { success: false, message: ERROR_MESSAGES.INTERNAL_ERROR },
-      { status: 500 }
-    );
+    // 오류 발생 시 홈으로 리다이렉트
+    return NextResponse.redirect(new URL('/', request.url));
   }
 }
 
