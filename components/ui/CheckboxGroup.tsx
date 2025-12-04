@@ -1,4 +1,4 @@
-import { ChangeEvent } from 'react';
+import { ChangeEvent, useId } from 'react';
 import { cn } from '@/lib/utils';
 
 interface CheckboxOption {
@@ -14,6 +14,7 @@ interface CheckboxGroupProps {
   required?: boolean;
   error?: string;
   layout?: 'vertical' | 'horizontal';
+  name?: string;
 }
 
 export default function CheckboxGroup({
@@ -24,7 +25,11 @@ export default function CheckboxGroup({
   required = false,
   error,
   layout = 'vertical',
+  name,
 }: CheckboxGroupProps) {
+  const groupId = useId();
+  const groupName = name || `checkbox-group-${groupId}`;
+  
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { value, checked } = e.target;
     if (checked) {
@@ -37,7 +42,7 @@ export default function CheckboxGroup({
   return (
     <div className="w-full">
       {label && (
-        <label className="block text-sm font-medium text-textPrimary mb-3">
+        <label className="block text-sm font-medium text-textPrimary mb-3" id={`${groupId}-label`}>
           {label}
           {required && <span className="text-error ml-1">*</span>}
         </label>
@@ -47,27 +52,35 @@ export default function CheckboxGroup({
           'flex gap-3',
           layout === 'vertical' ? 'flex-col' : 'flex-wrap'
         )}
+        role="group"
+        aria-labelledby={label ? `${groupId}-label` : undefined}
       >
-        {options.map((option) => (
-          <label
-            key={option.value}
-            className={cn(
-              'flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-colors',
-              values.includes(option.value)
-                ? 'border-primary bg-blue-50'
-                : 'border-border hover:border-primary hover:bg-blue-50/50'
-            )}
-          >
-            <input
-              type="checkbox"
-              value={option.value}
-              checked={values.includes(option.value)}
-              onChange={handleChange}
-              className="w-5 h-5 text-primary rounded focus:ring-primary"
-            />
-            <span className="text-base text-textPrimary">{option.label}</span>
-          </label>
-        ))}
+        {options.map((option) => {
+          const optionId = `${groupId}-${option.value}`;
+          return (
+            <label
+              key={option.value}
+              htmlFor={optionId}
+              className={cn(
+                'flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-colors',
+                values.includes(option.value)
+                  ? 'border-primary bg-blue-50'
+                  : 'border-border hover:border-primary hover:bg-blue-50/50'
+              )}
+            >
+              <input
+                type="checkbox"
+                id={optionId}
+                name={groupName}
+                value={option.value}
+                checked={values.includes(option.value)}
+                onChange={handleChange}
+                className="w-5 h-5 text-primary rounded focus:ring-primary"
+              />
+              <span className="text-base text-textPrimary">{option.label}</span>
+            </label>
+          );
+        })}
       </div>
       {error && (
         <p className="mt-2 text-sm text-error">{error}</p>
