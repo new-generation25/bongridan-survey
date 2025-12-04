@@ -732,48 +732,6 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
                 {totalAmount > 0 ? '사용 완료' : '스캔 중지'}
               </Button>
 
-              {/* 통계 표시 (사용 완료 버튼 클릭 후) */}
-              {showStats && storeStats && (
-                <Card className="mt-4">
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-bold text-textPrimary text-center">
-                      📊 쿠폰 사용 통계
-                    </h3>
-                    
-                    <div className="space-y-3">
-                      <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                        <p className="text-sm text-blue-700 font-semibold mb-2">오늘 현황</p>
-                        <p className="text-xl font-bold text-blue-900">
-                          사용: {storeStats.today_count}건 ({storeStats.today_amount.toLocaleString()}원)
-                        </p>
-                      </div>
-
-                      <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-                        <p className="text-sm text-green-700 font-semibold mb-2">누적 현황</p>
-                        <p className="text-xl font-bold text-green-900">
-                          사용: {storeStats.total_count}건 ({storeStats.total_amount.toLocaleString()}원)
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="pt-3 border-t border-border">
-                      <Button
-                        onClick={() => {
-                          setShowStats(false);
-                          setTotalAmount(0);
-                          setScanCount(0);
-                          scannedCouponsRef.current.clear();
-                          setScanning(true);
-                        }}
-                        variant="primary"
-                        fullWidth
-                      >
-                        다음 고객 스캔하기
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
-              )}
             </div>
           )}
 
