@@ -583,30 +583,19 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
 
   const handleStopScan = async () => {
     try {
-      // 통계 조회 (카메라는 유지)
+      // 통계 업데이트 (카메라는 유지)
       if (totalAmount > 0 && storeId) {
-        try {
-          const response = await fetch(`/api/store/${storeId}/stats`);
-          if (response.ok) {
-            const data = await response.json();
-            if (data.success) {
-              setStoreStats({
-                today_count: data.today_count || 0,
-                today_amount: data.today_amount || 0,
-                total_count: data.total_count || 0,
-                total_amount: data.total_amount || 0,
-              });
-              setShowStats(true);
-              // 카메라는 유지 (setScanning(false) 호출하지 않음)
-              return;
-            }
-          }
-        } catch (statsError) {
-          console.error('Fetch stats error:', statsError);
-        }
+        // 통계만 업데이트하고 카메라는 유지
+        fetchStoreStats(storeId);
+        // 상태 리셋
+        setTotalAmount(0);
+        setScanCount(0);
+        scannedCouponsRef.current.clear();
+        // 카메라는 유지 (setScanning(false) 호출하지 않음)
+        return;
       }
 
-      // 통계가 없거나 스캔 중지인 경우에만 카메라 정리
+      // 스캔 중지인 경우에만 카메라 정리
       if (qrCodeRef.current) {
         try {
           await qrCodeRef.current.stop();
