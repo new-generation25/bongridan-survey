@@ -86,22 +86,23 @@ export default function SurveyStep1Page() {
     }
   };
 
-  useEffect(() => {
-    const checkDuplicate = async () => {
-      const deviceId = getDeviceId();
-      const response = await fetch('/api/survey/check-duplicate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ device_id: deviceId }),
-      });
-      const data = await response.json();
-      if (data.is_duplicate) {
-        alert(data.message);
-        router.push('/');
-      }
-    };
-    checkDuplicate();
-  }, [router]);
+  // 중복 응답 확인 (테스트용으로 임시 비활성화)
+  // useEffect(() => {
+  //   const checkDuplicate = async () => {
+  //     const deviceId = getDeviceId();
+  //     const response = await fetch('/api/survey/check-duplicate', {
+  //       method: 'POST',
+  //       headers: { 'Content-Type': 'application/json' },
+  //       body: JSON.stringify({ device_id: deviceId }),
+  //     });
+  //     const data = await response.json();
+  //     if (data.is_duplicate) {
+  //       alert(data.message);
+  //       router.push('/');
+  //     }
+  //   };
+  //   checkDuplicate();
+  // }, [router]);
 
   if (loading) {
     return <Loading fullScreen text="설문을 제출하는 중입니다..." />;
