@@ -13,16 +13,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 쿠폰 유효성 검증
-    const validation = await supabaseHelpers.validateCoupon(code);
-    if (!validation.valid) {
-      return NextResponse.json(
-        { success: false, message: validation.message },
-        { status: 400 }
-      );
-    }
-
-    // 쿠폰 사용 처리
+    // 쿠폰 사용 처리 (원자적 업데이트: status가 'issued'인 경우에만 업데이트)
     const { data: coupon, error: couponError } = await supabaseAdmin
       .from('coupons')
       .update({
@@ -31,10 +22,33 @@ export async function POST(request: NextRequest) {
         used_store_id: store_id,
       })
       .eq('code', code)
+      .eq('status', 'issued') // 이미 사용된 쿠폰은 업데이트되지 않음
       .select()
       .single();
 
     if (couponError || !coupon) {
+      // 쿠폰이 없거나 이미 사용된 경우
+      if (couponError?.code === 'PGRST116' || !coupon) {
+        // 쿠폰 상태 확인
+        const { data: existingCoupon } = await supabaseAdmin
+          .from('coupons')
+          .select('status')
+          .eq('code', code)
+          .maybeSingle();
+        
+        if (existingCoupon?.status === 'used') {
+          return NextResponse.json(
+            { success: false, message: '이미 사용된 쿠폰입니다' },
+            { status: 400 }
+          );
+        }
+        
+        return NextResponse.json(
+          { success: false, message: ERROR_MESSAGES.COUPON_NOT_FOUND },
+          { status: 404 }
+        );
+      }
+      
       console.error('Coupon use error:', couponError);
       return NextResponse.json(
         { success: false, message: ERROR_MESSAGES.INTERNAL_ERROR },
