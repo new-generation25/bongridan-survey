@@ -5,6 +5,19 @@ import type { SurveyStep1Data } from '@/lib/types';
 
 export async function POST(request: NextRequest) {
   try {
+    // 환경 변수 확인
+    if (!process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_KEY === 'placeholder-service-key') {
+      console.error('SUPABASE_SERVICE_KEY is not set');
+      return NextResponse.json(
+        { 
+          success: false, 
+          message: '서버 설정 오류가 발생했습니다. 관리자에게 문의하세요.',
+          error: 'SUPABASE_SERVICE_KEY not configured'
+        },
+        { status: 500 }
+      );
+    }
+
     const data: SurveyStep1Data = await request.json();
 
     // 필수 필드 검증

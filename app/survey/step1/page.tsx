@@ -62,7 +62,13 @@ export default function SurveyStep1Page() {
       const data = await response.json();
 
       if (!response.ok) {
-        alert(data.message || '오류가 발생했습니다.');
+        console.error('API Error:', {
+          status: response.status,
+          statusText: response.statusText,
+          data: data
+        });
+        const errorMessage = data.message || data.error || '오류가 발생했습니다.';
+        alert(errorMessage);
         setLoading(false);
         return;
       }
