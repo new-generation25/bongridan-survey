@@ -125,23 +125,24 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         scanner = new Html5Qrcode('qr-reader');
         qrCodeRef.current = scanner;
 
-        // 전면 카메라 찾기
+        // 후면 카메라 찾기
         const devices = await Html5Qrcode.getCameras();
         let cameraId: string | null = null;
         
-        // 전면 카메라 찾기 (facingMode: 'user')
+        // 후면 카메라 찾기 (facingMode: 'environment')
         for (const device of devices) {
-          if (device.label.toLowerCase().includes('front') || 
-              device.label.toLowerCase().includes('user') ||
-              device.label.toLowerCase().includes('전면')) {
+          if (device.label.toLowerCase().includes('back') || 
+              device.label.toLowerCase().includes('rear') ||
+              device.label.toLowerCase().includes('environment') ||
+              device.label.toLowerCase().includes('후면')) {
             cameraId = device.id;
             break;
           }
         }
         
-        // 전면 카메라를 찾지 못한 경우 첫 번째 카메라 사용
+        // 후면 카메라를 찾지 못한 경우 마지막 카메라 사용 (보통 후면이 마지막)
         if (!cameraId && devices.length > 0) {
-          cameraId = devices[0].id;
+          cameraId = devices[devices.length - 1].id;
         }
 
         if (!cameraId) {
@@ -156,7 +157,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
             qrbox: { width: 250, height: 250 },
             aspectRatio: 1.0,
             videoConstraints: {
-              facingMode: 'user', // 전면 카메라
+              facingMode: 'environment', // 후면 카메라
             },
           },
           async (decodedText) => {
