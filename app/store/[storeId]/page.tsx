@@ -667,7 +667,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
               
               <Button
                 onClick={handleStopScan}
-                variant={totalAmount > 0 ? "default" : "outline"}
+                variant={totalAmount > 0 ? "primary" : "outline"}
                 className={totalAmount > 0 ? "bg-green-600 hover:bg-green-700 text-white border-green-600" : ""}
                 fullWidth
               >
