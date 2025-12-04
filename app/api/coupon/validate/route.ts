@@ -14,6 +14,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/coupon/qr-info', request.url));
     }
 
+    // 상점용 앱에서 스캔한 경우 (store 파라미터가 있거나 Referer가 /store/로 시작)
+    const referer = request.headers.get('referer') || '';
+    const isStoreApp = storeId !== null || referer.includes('/store/');
+
     // 쿠폰 ID로 쿠폰 정보 조회
     const { data: coupon, error } = await supabaseAdmin
       .from('coupons')
@@ -22,6 +26,14 @@ export async function GET(request: NextRequest) {
       .maybeSingle();
 
     if (error || !coupon) {
+      // 상점용 앱인 경우 JSON으로 에러 반환
+      if (isStoreApp && storeId) {
+        return NextResponse.json({
+          success: false,
+          valid: false,
+          message: '쿠폰을 찾을 수 없습니다',
+        }, { status: 404 });
+      }
       // 쿠폰을 찾을 수 없으면 안내 페이지로 리다이렉트
       return NextResponse.redirect(new URL('/coupon/qr-info', request.url));
     }
@@ -30,13 +42,17 @@ export async function GET(request: NextRequest) {
     const validation = await supabaseHelpers.validateCoupon(coupon.code);
 
     if (!validation.valid) {
-      // 유효하지 않은 쿠폰이면 안내 페이지로 리다이렉트
+      // 상점용 앱인 경우 JSON으로 에러 반환
+      if (isStoreApp && storeId) {
+        return NextResponse.json({
+          success: false,
+          valid: false,
+          message: validation.message || '유효하지 않은 쿠폰입니다',
+        }, { status: 400 });
+      }
+      // 일반 사용자가 스캔한 경우: 안내 페이지로 리다이렉트
       return NextResponse.redirect(new URL('/coupon/qr-info', request.url));
     }
-
-    // 상점용 앱에서 스캔한 경우 (store 파라미터가 있거나 Referer가 /store/로 시작)
-    const referer = request.headers.get('referer') || '';
-    const isStoreApp = storeId !== null || referer.includes('/store/');
 
     if (isStoreApp && storeId) {
       // 상점용 앱: JSON 응답 반환 (상점 앱에서 처리)
@@ -51,6 +67,18 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL('/coupon/qr-info', request.url));
   } catch (error) {
     console.error('Validate coupon error:', error);
+    // 상점용 앱인 경우 JSON으로 에러 반환
+    const referer = request.headers.get('referer') || '';
+    const storeId = request.nextUrl.searchParams.get('store');
+    const isStoreApp = storeId !== null || referer.includes('/store/');
+    
+    if (isStoreApp && storeId) {
+      return NextResponse.json({
+        success: false,
+        valid: false,
+        message: ERROR_MESSAGES.INTERNAL_ERROR,
+      }, { status: 500 });
+    }
     // 오류 발생 시 안내 페이지로 리다이렉트
     return NextResponse.redirect(new URL('/coupon/qr-info', request.url));
   }
