@@ -70,42 +70,41 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
   }, [storeId, router]);
 
   const handleCouponValidationById = useCallback(async (couponId: string) => {
-      try {
-        // 먼저 쿠폰 정보 조회 (상점용 파라미터 추가)
-        const validateResponse = await fetch(`/api/coupon/validate?id=${couponId}&store=${storeId}`);
-        const validateData = await validateResponse.json();
+    try {
+      // 먼저 쿠폰 정보 조회 (상점용 파라미터 추가)
+      const validateResponse = await fetch(`/api/coupon/validate?id=${couponId}&store=${storeId}`);
+      const validateData = await validateResponse.json();
 
-        if (!validateResponse.ok || !validateData.valid) {
-          setError(validateData.message || '유효하지 않은 쿠폰입니다.');
-          setScanning(false);
-          return;
-        }
-
-        // 쿠폰 사용 처리
-        const response = await fetch('/api/coupon/use', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            code: validateData.coupon.code,
-            store_id: storeId,
-          }),
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          setError(data.message || '쿠폰 사용에 실패했습니다.');
-          setScanning(false);
-          return;
-        }
-
-        // 사용 완료 페이지로 이동
-        router.push(`/store/${storeId}/complete?amount=${data.total_amount}`);
-      } catch (error) {
-        console.error('Coupon validation error:', error);
-        setError('네트워크 오류가 발생했습니다.');
+      if (!validateResponse.ok || !validateData.valid) {
+        setError(validateData.message || '유효하지 않은 쿠폰입니다.');
         setScanning(false);
+        return;
       }
+
+      // 쿠폰 사용 처리
+      const response = await fetch('/api/coupon/use', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: validateData.coupon.code,
+          store_id: storeId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.message || '쿠폰 사용에 실패했습니다.');
+        setScanning(false);
+        return;
+      }
+
+      // 사용 완료 페이지로 이동
+      router.push(`/store/${storeId}/complete?amount=${data.total_amount}`);
+    } catch (error) {
+      console.error('Coupon validation error:', error);
+      setError('네트워크 오류가 발생했습니다.');
+      setScanning(false);
     }
   }, [storeId, router]);
 
