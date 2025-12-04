@@ -24,9 +24,11 @@ export default function CompletePage() {
           if (surveyId) {
             const response = await fetch(`/api/coupon/by-survey/${surveyId}`);
             const data = await response.json();
-            if (data.success && data.coupon) {
+            if (data.success && data.coupon && data.coupon.id) {
               id = data.coupon.id;
-              localStorage.setItem('last_coupon_id', id);
+              if (id) {
+                localStorage.setItem('last_coupon_id', id);
+              }
             }
           }
         }
