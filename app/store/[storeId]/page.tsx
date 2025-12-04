@@ -127,8 +127,8 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
 
   const handleCouponValidationById = async (couponId: string) => {
     try {
-      // 먼저 쿠폰 정보 조회 (URL로 접근)
-      const validateResponse = await fetch(`/api/coupon/validate?id=${couponId}`);
+      // 먼저 쿠폰 정보 조회 (상점용 파라미터 추가)
+      const validateResponse = await fetch(`/api/coupon/validate?id=${couponId}&store=${storeId}`);
       const validateData = await validateResponse.json();
 
       if (!validateResponse.ok || !validateData.valid) {
