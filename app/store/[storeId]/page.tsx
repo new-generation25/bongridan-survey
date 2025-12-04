@@ -56,7 +56,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
     };
 
     fetchStore();
-  }, [params, router]);
+  }, [params, router, fetchStoreStats]);
 
   // 통계 조회 함수
   const fetchStoreStats = useCallback(async (storeIdValue: string) => {
@@ -201,6 +201,11 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       setTotalAmount((prev) => prev + addedAmount);
       setScanCount((prev) => prev + 1);
       
+      // 통계 업데이트
+      if (storeId) {
+        fetchStoreStats(storeId);
+      }
+      
       // 성공 플래시 효과 (검정색 깜박임 + 500원 적립 효과)
       setFlashAmount(addedAmount);
       setShowSuccessFlash(true);
@@ -222,7 +227,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       // 카메라는 유지 (setScanning 호출하지 않음)
       return false;
     }
-  }, [storeId]);
+  }, [storeId, fetchStoreStats]);
 
   const handleCouponValidationById = useCallback(async (couponId: string) => {
     // 중복 스캔 체크
