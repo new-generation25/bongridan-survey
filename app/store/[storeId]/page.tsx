@@ -18,6 +18,13 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccessFlash, setShowSuccessFlash] = useState(false);
   const [flashAmount, setFlashAmount] = useState(0);
+  const [showStats, setShowStats] = useState(false);
+  const [storeStats, setStoreStats] = useState<{
+    today_count: number;
+    today_amount: number;
+    total_count: number;
+    total_amount: number;
+  } | null>(null);
   const scannedCouponsRef = useRef<Set<string>>(new Set());
   const qrCodeRef = useRef<Html5Qrcode | null>(null);
   const errorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -548,7 +555,30 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
 
   const handleStopScan = async () => {
     try {
-      // 카메라 정리
+      // 통계 조회 (카메라는 유지)
+      if (totalAmount > 0 && storeId) {
+        try {
+          const response = await fetch(`/api/store/${storeId}/stats`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+              setStoreStats({
+                today_count: data.today_count || 0,
+                today_amount: data.today_amount || 0,
+                total_count: data.total_count || 0,
+                total_amount: data.total_amount || 0,
+              });
+              setShowStats(true);
+              // 카메라는 유지 (setScanning(false) 호출하지 않음)
+              return;
+            }
+          }
+        } catch (statsError) {
+          console.error('Fetch stats error:', statsError);
+        }
+      }
+
+      // 통계가 없거나 스캔 중지인 경우에만 카메라 정리
       if (qrCodeRef.current) {
         try {
           await qrCodeRef.current.stop();
@@ -673,6 +703,49 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
               >
                 {totalAmount > 0 ? '사용 완료' : '스캔 중지'}
               </Button>
+
+              {/* 통계 표시 (사용 완료 버튼 클릭 후) */}
+              {showStats && storeStats && (
+                <Card className="mt-4">
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-bold text-textPrimary text-center">
+                      📊 쿠폰 사용 통계
+                    </h3>
+                    
+                    <div className="space-y-3">
+                      <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                        <p className="text-sm text-blue-700 font-semibold mb-2">오늘 현황</p>
+                        <p className="text-xl font-bold text-blue-900">
+                          사용: {storeStats.today_count}건 ({storeStats.today_amount.toLocaleString()}원)
+                        </p>
+                      </div>
+
+                      <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                        <p className="text-sm text-green-700 font-semibold mb-2">누적 현황</p>
+                        <p className="text-xl font-bold text-green-900">
+                          사용: {storeStats.total_count}건 ({storeStats.total_amount.toLocaleString()}원)
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="pt-3 border-t border-border">
+                      <Button
+                        onClick={() => {
+                          setShowStats(false);
+                          setTotalAmount(0);
+                          setScanCount(0);
+                          scannedCouponsRef.current.clear();
+                          setScanning(true);
+                        }}
+                        variant="primary"
+                        fullWidth
+                      >
+                        다음 고객 스캔하기
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              )}
             </div>
           )}
 
