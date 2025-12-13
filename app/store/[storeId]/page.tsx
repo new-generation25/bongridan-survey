@@ -241,6 +241,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         
         // 성공 시 스캔된 쿠폰에 추가 (중복 방지)
         scannedCouponsRef.current.add(code);
+        addDebugLog('Coupon added to scanned set', {code,scannedSetSize:scannedCouponsRef.current.size,scannedCodes:Array.from(scannedCouponsRef.current)});
       } else {
         addDebugLog('Error response branch', {responseOk:response.ok,responseStatus:response.status,dataSuccess:data?.success,errorMessage:data?.message,code});
         // 실패 응답 처리
@@ -685,8 +686,11 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
             try {
               // 처리 중이면 무시 (중복 스캔 방지)
               if (isProcessing) {
+                addDebugLog('QR scan ignored (processing)', {decodedText,isProcessing});
                 return;
               }
+
+              addDebugLog('QR code scanned', {decodedText,hasErrorTimeout:!!errorTimeoutRef.current,currentError:error});
 
               // QR 코드 스캔 성공 - 카메라는 계속 유지
               // 스캐너를 멈추지 않고 계속 스캔 가능하도록 유지
@@ -704,24 +708,34 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
                     const url = new URL(decodedText, window.location.origin);
                     couponId = url.searchParams.get('id');
                   }
+                  addDebugLog('QR code parsed (URL)', {decodedText,couponId});
                 } catch (e) {
                   // URL 파싱 실패 시 숫자 코드로 처리
+                  addDebugLog('URL parse failed, using as code', {decodedText,error:e});
                   await handleCouponValidation(decodedText);
                   return;
                 }
               } else {
                 // 숫자 코드인 경우 (기존 방식 호환)
+                addDebugLog('QR code parsed (numeric)', {decodedText});
                 await handleCouponValidation(decodedText);
                 return;
               }
               
               if (couponId) {
+                addDebugLog('Calling handleCouponValidationById', {couponId});
                 await handleCouponValidationById(couponId);
               } else {
+                addDebugLog('Invalid QR code (no couponId)', {decodedText});
                 setError('유효하지 않은 QR 코드입니다.');
+                if (errorTimeoutRef.current) {
+                  clearTimeout(errorTimeoutRef.current);
+                }
+                errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
               }
             } catch (error) {
               console.error('QR scan callback error:', error);
+              addDebugLog('QR scan callback error', {error:error instanceof Error ? error.message : String(error),decodedText});
               setError('QR 코드 처리 중 오류가 발생했습니다.');
               if (errorTimeoutRef.current) {
                 clearTimeout(errorTimeoutRef.current);
