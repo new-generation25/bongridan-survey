@@ -57,6 +57,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
   const errorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastScanTimeRef = useRef<number>(0); // 마지막 QR 코드 인식 시간 (밀리초)
   const handleCouponValidationByIdRef = useRef<((couponId: string) => Promise<boolean>) | null>(null);
+  const isMountedRef = useRef<boolean>(true); // 컴포넌트 마운트 상태 추적
 
   // 통계 조회 함수
   const fetchStoreStats = useCallback(async (storeIdValue: string) => {
@@ -344,12 +345,18 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       // #region agent log
       fetch('http://127.0.0.1:7242/ingest/aeb5e0c2-08cc-4290-a930-f974f5271152',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:373',message:'Duplicate scan detected (already scanned)',data:{couponId,scannedSetSize:scannedCouponsRef.current.size},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
       // #endregion
-      setError('이미 적립된 쿠폰입니다.');
-      // 에러 메시지 자동 제거 (3초 후)
-      if (errorTimeoutRef.current) {
-        clearTimeout(errorTimeoutRef.current);
+      if (isMountedRef.current) {
+        setError('이미 적립된 쿠폰입니다.');
+        // 에러 메시지 자동 제거 (3초 후)
+        if (errorTimeoutRef.current) {
+          clearTimeout(errorTimeoutRef.current);
+        }
+        errorTimeoutRef.current = setTimeout(() => {
+          if (isMountedRef.current) {
+            setError('');
+          }
+        }, 3000);
       }
-      errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
       return false;
     }
 
