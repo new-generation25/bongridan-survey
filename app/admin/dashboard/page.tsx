@@ -301,21 +301,15 @@ export default function AdminDashboardPage() {
             </Card>
           </Link>
 
-          <Card className="hover:border-primary cursor-pointer transition-colors">
-            <div className="text-center space-y-3 py-4">
-              <div className="text-4xl">💵</div>
-              <p className="font-semibold text-textPrimary">정산 관리</p>
-              <p className="text-sm text-textSecondary">준비 중</p>
-            </div>
-          </Card>
-
-          <Card className="hover:border-primary cursor-pointer transition-colors">
-            <div className="text-center space-y-3 py-4">
-              <div className="text-4xl">🎁</div>
-              <p className="font-semibold text-textPrimary">추첨 관리</p>
-              <p className="text-sm text-textSecondary">준비 중</p>
-            </div>
-          </Card>
+          <Link href="/admin/raffle">
+            <Card className="hover:border-primary cursor-pointer transition-colors">
+              <div className="text-center space-y-3 py-4">
+                <div className="text-4xl">🎁</div>
+                <p className="font-semibold text-textPrimary">추첨 관리</p>
+                <p className="text-sm text-textSecondary">추첨 응모자 관리 및 당첨자 선정</p>
+              </div>
+            </Card>
+          </Link>
         </div>
       </div>
     </main>
