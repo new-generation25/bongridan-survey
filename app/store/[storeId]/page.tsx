@@ -133,13 +133,16 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
     
     // 중복 스캔 체크
     if (scannedCouponsRef.current.has(code)) {
-      addDebugLog('Duplicate scan detected', {code,scannedCodes:Array.from(scannedCouponsRef.current)});
+      addDebugLog('Duplicate scan detected', {code,scannedCodes:Array.from(scannedCouponsRef.current),totalAmount,scanCount});
       setError('이미 적립된 쿠폰입니다.');
       // 에러 메시지 자동 제거 (3초 후)
       if (errorTimeoutRef.current) {
         clearTimeout(errorTimeoutRef.current);
       }
-      errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
+      errorTimeoutRef.current = setTimeout(() => {
+        addDebugLog('Error timeout callback (duplicate)', {code});
+        setError('');
+      }, 3000);
       return false;
     }
 
@@ -249,14 +252,17 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         
         // 이미 사용된 쿠폰인 경우 - 스캔된 쿠폰 목록에 추가하여 중복 방지
         if (errorMessage.includes('이미 사용') || errorMessage.includes('사용된') || errorMessage.includes('이미 적립')) {
-          addDebugLog('Already used coupon error', {code,errorMessage});
+          addDebugLog('Already used coupon error', {code,errorMessage,responseOk:response.ok,responseStatus:response.status,dataSuccess:data?.success});
           scannedCouponsRef.current.add(code);
           setError('이미 적립된 쿠폰입니다.');
           // 에러 메시지 자동 제거 (3초 후)
           if (errorTimeoutRef.current) {
             clearTimeout(errorTimeoutRef.current);
           }
-          errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
+          errorTimeoutRef.current = setTimeout(() => {
+            addDebugLog('Error timeout callback (already used)', {code});
+            setError('');
+          }, 3000);
         } else if (errorMessage.includes('유효하지 않은')) {
           setError('유효하지 않은 쿠폰입니다.');
           if (errorTimeoutRef.current) {
