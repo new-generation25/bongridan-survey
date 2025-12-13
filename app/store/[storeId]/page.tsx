@@ -200,21 +200,12 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
 
       // 성공 처리 계속 진행
 
-      // 성공 시 에러 메시지와 타임아웃 확실히 제거 (즉시, 여러 번 확인)
+      // 성공 시 에러 메시지와 타임아웃 확실히 제거 (즉시)
       if (errorTimeoutRef.current) {
         clearTimeout(errorTimeoutRef.current);
         errorTimeoutRef.current = null;
       }
       setError(''); // 성공 시 에러 메시지 즉시 제거
-      
-      // 추가 확인: 성공 후에도 에러 메시지가 없는지 다시 확인
-      setTimeout(() => {
-        if (errorTimeoutRef.current) {
-          clearTimeout(errorTimeoutRef.current);
-          errorTimeoutRef.current = null;
-        }
-        setError('');
-      }, 0);
 
       // 누적 금액 업데이트 (카메라 유지)
       // API의 total_amount는 단일 쿠폰 금액이므로 500원 사용
