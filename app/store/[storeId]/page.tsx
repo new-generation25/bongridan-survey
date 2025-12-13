@@ -886,7 +886,38 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
           {/* 디버그 로그 표시 (모바일에서도 확인 가능) */}
           {debugLogs.length > 0 && (
             <div className="bg-gray-100 border border-gray-300 rounded-lg p-3 mb-4 max-h-60 overflow-y-auto">
-              <p className="text-xs font-semibold text-gray-700 mb-2">🔍 디버그 로그 (최근 10개)</p>
+              <div className="flex justify-between items-center mb-2">
+                <p className="text-xs font-semibold text-gray-700">🔍 디버그 로그 (최근 {debugLogs.length}개)</p>
+                <button
+                  onClick={() => {
+                    const logText = debugLogs.map((log, idx) => {
+                      return `[${idx + 1}] [${log.time}] ${log.message}\n${JSON.stringify(log.data, null, 2)}`;
+                    }).join('\n\n');
+                    const fullText = `=== 디버그 로그 (${new Date().toLocaleString('ko-KR')}) ===\n\n${logText}\n\n=== 현재 상태 ===\n총 적립 금액: ${totalAmount}원\n스캔 카운트: ${scanCount}개\n에러 메시지: ${error || '(없음)'}\n스캔된 쿠폰: ${Array.from(scannedCouponsRef.current).join(', ')}`;
+                    navigator.clipboard.writeText(fullText).then(() => {
+                      alert('디버그 로그가 클립보드에 복사되었습니다!');
+                    }).catch(() => {
+                      // 클립보드 API 실패 시 fallback
+                      const textArea = document.createElement('textarea');
+                      textArea.value = fullText;
+                      textArea.style.position = 'fixed';
+                      textArea.style.opacity = '0';
+                      document.body.appendChild(textArea);
+                      textArea.select();
+                      try {
+                        document.execCommand('copy');
+                        alert('디버그 로그가 클립보드에 복사되었습니다!');
+                      } catch (err) {
+                        alert('복사에 실패했습니다. 로그를 수동으로 복사해주세요.');
+                      }
+                      document.body.removeChild(textArea);
+                    });
+                  }}
+                  className="text-xs bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded"
+                >
+                  📋 전체 복사
+                </button>
+              </div>
               <div className="space-y-1">
                 {debugLogs.map((log, idx) => (
                   <div key={idx} className="text-xs text-gray-600 font-mono bg-white p-2 rounded border border-gray-200">
