@@ -35,8 +35,8 @@ export default function AdminRafflePage() {
   const [loading, setLoading] = useState(true);
   const [drawing, setDrawing] = useState(false);
   const [winners, setWinners] = useState<Winner[]>([]);
-  const [totalCount, setTotalCount] = useState(0);
-  const [eligibleCount, setEligibleCount] = useState(0);
+  const [totalCount, setTotalCount] = useState(0); // 추첨 응모자 수 (raffle_entries_count)
+  const [eligibleCount, setEligibleCount] = useState(0); // 2단계 설문 완료자 수
 
   useEffect(() => {
     const token = storage.get<string>('admin_token');
@@ -73,7 +73,8 @@ export default function AdminRafflePage() {
 
       if (result.success) {
         setEntries(result.entries || []);
-        setTotalCount(result.total_count || 0);
+        // raffle_entries_count가 있으면 사용, 없으면 total_count 사용 (하위 호환성)
+        setTotalCount(result.raffle_entries_count !== undefined ? result.raffle_entries_count : result.total_count || 0);
         setEligibleCount(result.eligible_count || 0);
       }
     } catch (error) {

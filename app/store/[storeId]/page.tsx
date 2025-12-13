@@ -797,9 +797,11 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
     startScanning();
 
     return () => {
-      if (scanner) {
-        scanner.stop().catch(console.error);
-        scanner.clear();
+      // qrCodeRef.current를 사용하여 현재 활성화된 스캐너 정리
+      if (qrCodeRef.current) {
+        qrCodeRef.current.stop().catch(console.error);
+        qrCodeRef.current.clear();
+        qrCodeRef.current = null;
       }
       if (errorTimeoutRef.current) {
         clearTimeout(errorTimeoutRef.current);

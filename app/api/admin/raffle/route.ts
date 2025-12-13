@@ -55,21 +55,52 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 설문 정보와 결합
+    // 추첨 응모를 하지 않은 설문 완료자도 포함하여 표시
+    // (추첨 응모를 하지 않았어도 2단계 설문 완료자는 추첨 대상이 될 수 있음)
+    const entriesMap = new Map((entries || []).map((e) => [e.survey_id, e]));
+    const allEntries = completedSurveys.map((survey) => {
+      const entry = entriesMap.get(survey.id);
+      if (entry) {
+        // 추첨 응모를 한 경우
+        return {
+          ...entry,
+          survey_region: survey.q1_region || '-',
+          survey_created_at: survey.created_at || entry.created_at,
+          has_raffle_entry: true,
+        };
+      } else {
+        // 추첨 응모를 하지 않은 경우 (2단계 설문만 완료)
+        return {
+          id: null,
+          survey_id: survey.id,
+          name: '-',
+          phone: '-',
+          agreed_privacy: false,
+          created_at: survey.created_at,
+          survey_region: survey.q1_region || '-',
+          survey_created_at: survey.created_at,
+          has_raffle_entry: false,
+        };
+      }
+    });
+
+    // 설문 정보와 결합 (기존 로직 유지 - 추첨 응모를 한 경우만)
     const entriesWithSurvey = (entries || []).map((entry) => {
       const survey = completedSurveys.find((s) => s.id === entry.survey_id);
       return {
         ...entry,
         survey_region: survey?.q1_region || '-',
         survey_created_at: survey?.created_at || entry.created_at,
+        has_raffle_entry: true,
       };
     });
 
     return NextResponse.json({
       success: true,
-      entries: entriesWithSurvey,
-      total_count: entriesWithSurvey.length,
-      eligible_count: completedSurveys.length,
+      entries: allEntries, // 모든 2단계 설문 완료자 포함 (추첨 응모 여부와 관계없이)
+      total_count: allEntries.length, // 2단계 설문 완료자 총 수
+      eligible_count: completedSurveys.length, // 추첨 가능한 응답자 수 (2단계 완료자)
+      raffle_entries_count: entriesWithSurvey.length, // 실제 추첨 응모한 사람 수
     });
   } catch (error) {
     console.error('Get raffle entries error:', error);
