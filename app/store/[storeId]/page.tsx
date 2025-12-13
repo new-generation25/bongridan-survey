@@ -293,7 +293,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       setFlashAmount(addedAmount);
       setShowSuccessFlash(true);
       
-      // 0.5초 후 카메라 재개
+      // 1초 후 카메라 재개
       setTimeout(() => {
         setShowSuccessFlash(false);
         setFlashAmount(0);
@@ -312,7 +312,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
           }
           return currentError;
         });
-      }, 500);
+      }, 1000);
       
       setIsProcessing(false);
       return true;
@@ -619,12 +619,12 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       setShowSuccessFlash(true);
       setCameraPaused(true);
       
-      // 0.5초 후 카메라 재개
+      // 1초 후 카메라 재개
       setTimeout(() => {
         setShowSuccessFlash(false);
         setFlashAmount(0);
         setCameraPaused(false);
-      }, 500);
+      }, 1000);
       
       setIsProcessing(false);
       processingCouponsRef.current.delete(couponId); // 처리 중인 쿠폰 제거 (성공)

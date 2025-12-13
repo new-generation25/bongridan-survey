@@ -84,11 +84,11 @@ bongridan-survey/
 - ✅ 실시간 사용 통계
 
 ### 관리자용
-- ⏳ 대시보드 (통계 및 차트)
-- ⏳ 가맹점 관리
-- ⏳ 정산 관리
-- ⏳ 추첨 응모자 목록
-- ⏳ 데이터 내보내기 (Excel)
+- ✅ 대시보드 (통계 및 차트)
+- ✅ 가맹점 관리
+- ✅ 정산 관리
+- ✅ 추첨 응모자 목록
+- ✅ QR 코드 생성
 
 ## URL 구조
 
@@ -106,13 +106,13 @@ bongridan-survey/
 - `/store/[storeId]/manual` - 숫자 코드 입력
 - `/store/[storeId]/complete` - 사용 완료
 
-### 관리자용 (예정)
+### 관리자용
 - `/admin` - 로그인
 - `/admin/dashboard` - 대시보드
 - `/admin/stores` - 가맹점 관리
 - `/admin/settlements` - 정산 관리
 - `/admin/raffle` - 추첨 응모자
-- `/admin/export` - 데이터 내보내기
+- `/admin/qr` - QR 코드 생성
 
 ## 배포
 
@@ -138,9 +138,7 @@ bongridan-survey/
 - API 라우트 (설문, 쿠폰, 가맹점)
 - 고객용 페이지 (설문, 쿠폰, 추첨)
 - 점원용 페이지 (QR 스캔)
-
-⏳ 진행 중:
-- 관리자 페이지
+- 관리자 페이지 (대시보드, 가맹점, 정산, 추첨, QR)
 
 ## 라이선스
 MIT
