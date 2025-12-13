@@ -152,7 +152,7 @@ export default function AdminStoreDetailPage({ params }: { params: Promise<{ id:
       const link = document.createElement('a');
       link.href = qrDataUrl;
       const safeName = store.name.replace(/[^a-zA-Z0-9가-힣]/g, '_');
-      link.download = `가맹점_${safeName}_QR코드.png`;
+      link.download = `${storeId}_${safeName}_qr코드.PNG`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
