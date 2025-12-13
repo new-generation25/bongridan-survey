@@ -645,6 +645,12 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
 
   // 카메라 스트림 시작 (자동 스캔, 1초에 1번씩만 인식)
   useEffect(() => {
+    // storeId와 storeName이 설정되면 자동으로 스캔 시작
+    if (storeId && storeName && !scanning) {
+      setScanning(true);
+      return;
+    }
+
     if (!scanning || !storeId || !storeName) return;
 
     let scanner: Html5Qrcode | null = null;
@@ -694,18 +700,11 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
 
               // 마지막 인식 후 1초가 지나지 않았으면 무시
               if (timeSinceLastScan < 1000) {
-                addDebugLog('QR scan ignored (too soon)', {
-                  decodedText: decodedText.substring(0, 20) + '...',
-                  timeSinceLastScan,
-                  lastScanTime: lastScanTimeRef.current,
-                  now
-                });
-                return;
+                return; // 디버그 로그 없이 무시
               }
 
               // 마지막 인식 시간 업데이트
               lastScanTimeRef.current = now;
-              addDebugLog('QR code scanned', {decodedText, timeSinceLastScan});
 
               // URL 형식인지 확인
               let couponId: string | null = null;
@@ -718,9 +717,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
                     const url = new URL(decodedText, window.location.origin);
                     couponId = url.searchParams.get('id');
                   }
-                  addDebugLog('QR code parsed (URL)', {decodedText, couponId});
                 } catch (e) {
-                  addDebugLog('URL parse failed', {decodedText, error: e});
                   setError('QR 코드 형식이 올바르지 않습니다.');
                   if (errorTimeoutRef.current) {
                     clearTimeout(errorTimeoutRef.current);
@@ -729,7 +726,6 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
                   return;
                 }
               } else {
-                addDebugLog('Numeric code detected (not supported)', {decodedText});
                 setError('숫자 코드는 수동 입력을 사용해주세요.');
                 if (errorTimeoutRef.current) {
                   clearTimeout(errorTimeoutRef.current);
@@ -741,7 +737,6 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
               if (couponId) {
                 // 이미 촬영 목록에 있는지 확인 (ref 사용하여 최신 값 참조)
                 if (pendingCouponsRef.current.some(c => c.couponId === couponId)) {
-                  addDebugLog('QR code already in pending list', {couponId});
                   return; // 에러 메시지 표시하지 않고 무시
                 }
 
@@ -749,9 +744,8 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
                 const newPendingCoupon = { couponId, timestamp: now };
                 pendingCouponsRef.current = [...pendingCouponsRef.current, newPendingCoupon];
                 setPendingCoupons(prev => [...prev, newPendingCoupon]);
-                addDebugLog('QR code added to pending list', { couponId, pendingCount: pendingCouponsRef.current.length });
+                addDebugLog('QR 코드 촬영됨', { couponId, 촬영개수: pendingCouponsRef.current.length });
               } else {
-                addDebugLog('Invalid QR code (no couponId)', {decodedText});
                 setError('유효하지 않은 QR 코드입니다.');
                 if (errorTimeoutRef.current) {
                   clearTimeout(errorTimeoutRef.current);
@@ -760,7 +754,6 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
               }
             } catch (error) {
               console.error('QR scan callback error:', error);
-              addDebugLog('QR scan callback error', {error: error instanceof Error ? error.message : String(error), decodedText});
               setError('QR 코드 처리 중 오류가 발생했습니다.');
               if (errorTimeoutRef.current) {
                 clearTimeout(errorTimeoutRef.current);
@@ -856,7 +849,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       }, 1000);
     }
 
-    addDebugLog('Coupons applied', { successCount, totalCount: pendingCoupons.length, totalAmount: totalAddedAmount });
+    addDebugLog('적립 완료', { 성공개수: successCount, 총개수: pendingCoupons.length, 총금액: totalAddedAmount });
   }, [pendingCoupons, handleCouponValidationById, fetchStoreStats, storeId, addDebugLog]);
 
   const handleComplete = async () => {
