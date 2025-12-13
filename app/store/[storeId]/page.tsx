@@ -648,6 +648,11 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
     }
   }, [storeId]);
 
+  // handleCouponValidationById를 ref에 저장하여 항상 최신 버전 참조
+  useEffect(() => {
+    handleCouponValidationByIdRef.current = handleCouponValidationById;
+  }, [handleCouponValidationById]);
+
   // 카메라 스트림 시작 (자동 스캔, 1초에 1번씩만 인식)
   useEffect(() => {
     // storeId와 storeName이 설정되면 자동으로 스캔 시작
