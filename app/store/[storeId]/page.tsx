@@ -18,6 +18,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccessFlash, setShowSuccessFlash] = useState(false);
   const [flashAmount, setFlashAmount] = useState(0);
+  const [cameraPaused, setCameraPaused] = useState(false);
   const [storeStats, setStoreStats] = useState<{
     today_count: number;
     today_amount: number;
@@ -151,6 +152,13 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
 
       // 성공 응답 확인 (response.ok와 data.success 모두 확인)
       if (response.ok && data.success === true) {
+        // 성공 시 즉시 에러 메시지 제거 (가장 먼저 처리)
+        if (errorTimeoutRef.current) {
+          clearTimeout(errorTimeoutRef.current);
+          errorTimeoutRef.current = null;
+        }
+        setError(''); // 성공 시 에러 메시지 즉시 제거
+        
         // 성공 시 스캔된 쿠폰에 추가 (중복 방지)
         scannedCouponsRef.current.add(code);
       } else {
@@ -211,6 +219,12 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       // 누적 금액 업데이트 (카메라 유지)
       // API의 total_amount는 단일 쿠폰 금액이므로 500원 사용
       const addedAmount = 500;
+      
+      // 카메라 일시 정지 (검정 화면 표시)
+      setCameraPaused(true);
+      // 카메라 스트림을 일시적으로 숨기기 위해 오버레이 표시
+      
+      // 누적 금액 업데이트 (함수형 업데이트로 최신 값 사용)
       setTotalAmount((prev) => prev + addedAmount);
       setScanCount((prev) => prev + 1);
       
@@ -222,10 +236,13 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       // 성공 플래시 효과 (검정색 깜박임 + 500원 적립 효과)
       setFlashAmount(addedAmount);
       setShowSuccessFlash(true);
+      
+      // 0.5초 후 카메라 재개
       setTimeout(() => {
         setShowSuccessFlash(false);
         setFlashAmount(0);
-      }, 800);
+        setCameraPaused(false);
+      }, 500);
       
       setIsProcessing(false);
       return true;
@@ -399,6 +416,13 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
 
       // 성공 응답 확인 (response.ok와 data.success 모두 확인)
       if (response.ok && data.success === true) {
+        // 성공 시 즉시 에러 메시지 제거 (가장 먼저 처리)
+        if (errorTimeoutRef.current) {
+          clearTimeout(errorTimeoutRef.current);
+          errorTimeoutRef.current = null;
+        }
+        setError(''); // 성공 시 에러 메시지 즉시 제거
+        
         // 성공 시 스캔된 쿠폰에 추가 (중복 방지)
         scannedCouponsRef.current.add(couponId);
       } else {
@@ -459,16 +483,25 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       // 누적 금액 업데이트 (카메라 유지)
       // API의 total_amount는 단일 쿠폰 금액이므로 500원 사용
       const addedAmount = 500;
+      
+      // 카메라 일시 정지 (검정 화면 표시)
+      setCameraPaused(true);
+      // 카메라 스트림을 일시적으로 숨기기 위해 오버레이 표시
+      
+      // 누적 금액 업데이트 (함수형 업데이트로 최신 값 사용)
       setTotalAmount((prev) => prev + addedAmount);
       setScanCount((prev) => prev + 1);
       
       // 성공 플래시 효과 (검정색 깜박임 + 500원 적립 효과)
       setFlashAmount(addedAmount);
       setShowSuccessFlash(true);
+      
+      // 0.5초 후 카메라 재개
       setTimeout(() => {
         setShowSuccessFlash(false);
         setFlashAmount(0);
-      }, 800);
+        setCameraPaused(false);
+      }, 500);
       
       setIsProcessing(false);
       return true;
@@ -625,25 +658,47 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
     setScanning(true);
   };
 
-  const handleStopScan = async () => {
+  const handleComplete = async () => {
     try {
-      // 통계 업데이트 (카메라는 유지)
+      // 통계 업데이트
       if (totalAmount > 0 && storeId) {
-        // 통계만 업데이트하고 카메라는 유지
         try {
           await fetchStoreStats(storeId);
         } catch (statsError) {
-          console.error('Fetch stats error in handleStopScan:', statsError);
+          console.error('Fetch stats error in handleComplete:', statsError);
         }
-        // 상태 리셋
-        setTotalAmount(0);
-        setScanCount(0);
-        scannedCouponsRef.current.clear();
-        // 카메라는 유지 (setScanning(false) 호출하지 않음)
-        return;
       }
+      
+      // 카메라 중지
+      if (qrCodeRef.current) {
+        try {
+          await qrCodeRef.current.stop();
+        } catch (stopError) {
+          console.error('Stop scanner error:', stopError);
+        }
+        try {
+          qrCodeRef.current.clear();
+        } catch (clearError) {
+          console.error('Clear scanner error:', clearError);
+        }
+        qrCodeRef.current = null;
+      }
+      
+      // 상태 리셋
+      setTotalAmount(0);
+      setScanCount(0);
+      scannedCouponsRef.current.clear();
+      setScanning(false);
+      setCameraPaused(false);
+      setError('');
+    } catch (error) {
+      console.error('Complete error:', error);
+    }
+  };
 
-      // 스캔 중지인 경우에만 카메라 정리
+  const handleStopScan = async () => {
+    try {
+      // 카메라 정리
       if (qrCodeRef.current) {
         try {
           await qrCodeRef.current.stop();
@@ -658,6 +713,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         qrCodeRef.current = null;
       }
       setScanning(false);
+      setCameraPaused(false);
     } catch (error) {
       console.error('Stop scan error:', error);
       setScanning(false);
@@ -705,15 +761,20 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
 
           {scanning && (
             <div className="space-y-4">
-              {/* 적립 금액 표시 (카메라 위쪽) */}
+              {/* 적립 금액 표시 (카메라 위쪽) - 더 크고 명확하게 */}
               {(totalAmount > 0 || scanCount > 0) && (
-                <div className="bg-green-50 border-2 border-green-300 rounded-lg p-4 text-center shadow-lg">
-                  <p className="text-sm text-green-700 mb-1">총 적립 금액</p>
-                  <p className="text-3xl font-bold text-green-800">
+                <div className="bg-green-50 border-4 border-green-500 rounded-xl p-6 text-center shadow-2xl transform transition-all duration-300 scale-105">
+                  <p className="text-base text-green-700 mb-2 font-semibold">총 적립 금액</p>
+                  <p 
+                    className="text-5xl font-bold text-green-800 transition-all duration-300"
+                    style={{
+                      transform: showSuccessFlash ? 'scale(1.2)' : 'scale(1)',
+                    }}
+                  >
                     {totalAmount.toLocaleString()}원
                   </p>
                   {scanCount > 0 && (
-                    <p className="text-xs text-green-600 mt-1">
+                    <p className="text-sm text-green-600 mt-2 font-semibold">
                       ({scanCount}개 쿠폰 사용)
                     </p>
                   )}
@@ -729,44 +790,25 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
 
               {/* QR reader는 항상 렌더링 (카메라 유지) */}
               <div id="qr-reader" className="w-full relative">
-                {/* 성공 플래시 효과 - 검정색 깜박임 + 500원 적립 효과 */}
-                {showSuccessFlash && (
-                  <div 
-                    className="absolute inset-0 bg-black bg-opacity-90 z-10 rounded-lg flex items-center justify-center pointer-events-none"
-                    style={{
-                      animation: 'flash 0.8s ease-in-out',
-                    }}
-                  >
-                    <div className="bg-white rounded-lg p-6 shadow-lg">
-                      <p className="text-4xl font-bold text-green-600 text-center">+{flashAmount}원</p>
-                      <p className="text-lg font-bold text-green-700 mt-2 text-center">적립!</p>
+                {/* 카메라 일시 정지 시 검정 화면 */}
+                {cameraPaused && (
+                  <div className="absolute inset-0 bg-black z-20 rounded-lg flex items-center justify-center">
+                    <div className="bg-white rounded-lg p-8 shadow-2xl">
+                      <p className="text-5xl font-bold text-green-600 text-center mb-2">+{flashAmount}원</p>
+                      <p className="text-xl font-bold text-green-700 text-center">적립 완료!</p>
                     </div>
                   </div>
                 )}
               </div>
-
-              {/* 전체 화면 플래시 효과 */}
-              {showSuccessFlash && (
-                <div 
-                  className="fixed inset-0 bg-black z-50 flex items-center justify-center pointer-events-none"
-                  style={{
-                    animation: 'flash 0.8s ease-in-out',
-                  }}
-                >
-                  <div className="bg-white rounded-lg p-8 shadow-2xl transform scale-110">
-                    <p className="text-5xl font-bold text-green-600 text-center mb-2">+{flashAmount}원</p>
-                    <p className="text-xl font-bold text-green-700 text-center">적립 완료!</p>
-                  </div>
-                </div>
-              )}
               
               <Button
-                onClick={handleStopScan}
+                onClick={totalAmount > 0 ? handleComplete : handleStopScan}
                 variant={totalAmount > 0 ? "primary" : "outline"}
                 className={totalAmount > 0 ? "bg-green-600 hover:bg-green-700 text-white border-green-600" : ""}
                 fullWidth
+                size="lg"
               >
-                {totalAmount > 0 ? '사용 완료' : '스캔 중지'}
+                {totalAmount > 0 ? '✅ 사용 완료' : '스캔 중지'}
               </Button>
 
             </div>
