@@ -16,6 +16,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
   const [totalAmount, setTotalAmount] = useState(0);
   const [scanCount, setScanCount] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [debugLogs, setDebugLogs] = useState<Array<{time: string, message: string, data: unknown}>>([]);
   const [showSuccessFlash, setShowSuccessFlash] = useState(false);
   const [flashAmount, setFlashAmount] = useState(0);
   const [cameraPaused, setCameraPaused] = useState(false);
@@ -78,55 +79,55 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
     fetchStore();
   }, [params, router, fetchStoreStats]);
 
+  // 디버그 로그 추가 함수
+  const addDebugLog = useCallback((message: string, data: unknown) => {
+    const logEntry = {
+      time: new Date().toLocaleTimeString('ko-KR'),
+      message,
+      data
+    };
+    setDebugLogs(prev => [...prev.slice(-9), logEntry]); // 최근 10개만 유지
+    console.log(`[DEBUG] ${message}:`, data);
+  }, []);
+
   // 에러 상태 변화 추적 (프로덕션 환경에서도 작동)
   useEffect(() => {
     if (error) {
       const logData = {
-        location: 'page.tsx:80',
-        message: 'Error state changed',
-        data: {
-          errorMessage: error,
-          hasErrorTimeout: !!errorTimeoutRef.current,
-          scannedSetSize: scannedCouponsRef.current.size,
-          scannedCodes: Array.from(scannedCouponsRef.current),
-          totalAmount,
-          scanCount,
-          isProcessing,
-          timestamp: new Date().toISOString()
-        },
-        sessionId: 'debug-session',
-        runId: 'run2',
-        hypothesisId: 'D'
+        errorMessage: error,
+        hasErrorTimeout: !!errorTimeoutRef.current,
+        scannedSetSize: scannedCouponsRef.current.size,
+        scannedCodes: Array.from(scannedCouponsRef.current),
+        totalAmount,
+        scanCount,
+        isProcessing,
+        timestamp: new Date().toISOString()
       };
       
-      // 브라우저 콘솔에 상세 로그 출력 (프로덕션에서도 작동)
-      console.log('[DEBUG] Error set:', logData);
+      addDebugLog('Error state changed', logData);
       
       // 로컬 개발 환경에서만 HTTP 로깅 시도
       if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
         fetch('http://127.0.0.1:7242/ingest/aeb5e0c2-08cc-4290-a930-f974f5271152',{
           method:'POST',
           headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({...logData, timestamp:Date.now()})
+          body:JSON.stringify({location:'page.tsx:80',message:'Error state changed',data:logData,timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'D'})
         }).catch(()=>{});
       }
     }
-  }, [error, totalAmount, scanCount, isProcessing]);
+  }, [error, totalAmount, scanCount, isProcessing, addDebugLog]);
 
   const handleCouponValidation = useCallback(async (code: string) => {
-    const logEntry = (msg: string, data: Record<string, unknown>) => {
-      const logData = {location:'page.tsx:81',message:msg,data:{...data,code,timestamp:new Date().toISOString()},sessionId:'debug-session',runId:'run2'};
-      console.log(`[DEBUG] ${msg}:`, logData);
-      if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-        fetch('http://127.0.0.1:7242/ingest/aeb5e0c2-08cc-4290-a930-f974f5271152',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...logData,timestamp:Date.now()})}).catch(()=>{});
-      }
-    };
-    
-    logEntry('handleCouponValidation entry', {hasCode:scannedCouponsRef.current.has(code),scannedSetSize:scannedCouponsRef.current.size,scannedCodes:Array.from(scannedCouponsRef.current)});
+    addDebugLog('handleCouponValidation entry', {
+      code,
+      hasCode: scannedCouponsRef.current.has(code),
+      scannedSetSize: scannedCouponsRef.current.size,
+      scannedCodes: Array.from(scannedCouponsRef.current)
+    });
     
     // 중복 스캔 체크
     if (scannedCouponsRef.current.has(code)) {
-      console.log('[DEBUG] Duplicate scan detected:', {code,scannedCodes:Array.from(scannedCouponsRef.current)});
+      addDebugLog('Duplicate scan detected', {code,scannedCodes:Array.from(scannedCouponsRef.current)});
       setError('이미 적립된 쿠폰입니다.');
       // 에러 메시지 자동 제거 (3초 후)
       if (errorTimeoutRef.current) {
@@ -196,11 +197,11 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         return false;
       }
 
-      console.log('[DEBUG] API response received:', {responseOk:response.ok,responseStatus:response.status,dataSuccess:data?.success,dataMessage:data?.message,code});
+      addDebugLog('API response received', {responseOk:response.ok,responseStatus:response.status,dataSuccess:data?.success,dataMessage:data?.message,code});
       
       // 성공 응답 확인 (response.ok와 data.success 모두 확인)
       if (response.ok && data.success === true) {
-        console.log('[DEBUG] Success response branch:', {code,currentError:error,beforeSetError:true});
+        addDebugLog('Success response branch', {code,currentError:error,beforeSetError:true});
         // 성공 시 즉시 에러 메시지 제거 (가장 먼저 처리)
         if (errorTimeoutRef.current) {
           clearTimeout(errorTimeoutRef.current);
@@ -211,13 +212,13 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         // 성공 시 스캔된 쿠폰에 추가 (중복 방지)
         scannedCouponsRef.current.add(code);
       } else {
-        console.log('[DEBUG] Error response branch:', {responseOk:response.ok,responseStatus:response.status,dataSuccess:data?.success,errorMessage:data?.message,code});
+        addDebugLog('Error response branch', {responseOk:response.ok,responseStatus:response.status,dataSuccess:data?.success,errorMessage:data?.message,code});
         // 실패 응답 처리
         const errorMessage = data?.message || '쿠폰 사용에 실패했습니다.';
         
         // 이미 사용된 쿠폰인 경우 - 스캔된 쿠폰 목록에 추가하여 중복 방지
         if (errorMessage.includes('이미 사용') || errorMessage.includes('사용된') || errorMessage.includes('이미 적립')) {
-          console.log('[DEBUG] Already used coupon error:', {code,errorMessage});
+          addDebugLog('Already used coupon error', {code,errorMessage});
           scannedCouponsRef.current.add(code);
           setError('이미 적립된 쿠폰입니다.');
           // 에러 메시지 자동 제거 (3초 후)
@@ -251,7 +252,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
 
       // 성공 처리 계속 진행
 
-      console.log('[DEBUG] After success check, before amount update:', {code,currentError:error,hasErrorTimeout:!!errorTimeoutRef.current});
+      addDebugLog('After success check, before amount update', {code,currentError:error,hasErrorTimeout:!!errorTimeoutRef.current});
       
       // 성공 시 에러 메시지와 타임아웃 확실히 제거 (즉시)
       if (errorTimeoutRef.current) {
@@ -812,6 +813,26 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
           {error && (
             <div className="bg-red-50 border border-error rounded-lg p-4 mb-6">
               <p className="text-error font-medium text-center">⚠️ {error}</p>
+            </div>
+          )}
+
+          {/* 디버그 로그 표시 (모바일에서도 확인 가능) */}
+          {debugLogs.length > 0 && (
+            <div className="bg-gray-100 border border-gray-300 rounded-lg p-3 mb-4 max-h-60 overflow-y-auto">
+              <p className="text-xs font-semibold text-gray-700 mb-2">🔍 디버그 로그 (최근 10개)</p>
+              <div className="space-y-1">
+                {debugLogs.map((log, idx) => (
+                  <div key={idx} className="text-xs text-gray-600 font-mono bg-white p-2 rounded border border-gray-200">
+                    <span className="text-gray-500">[{log.time}]</span> {log.message}
+                    <details className="mt-1">
+                      <summary className="cursor-pointer text-blue-600">데이터 보기</summary>
+                      <pre className="mt-1 text-xs overflow-x-auto bg-gray-50 p-2 rounded">
+                        {JSON.stringify(log.data, null, 2)}
+                      </pre>
+                    </details>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
