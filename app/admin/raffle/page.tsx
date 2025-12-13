@@ -367,23 +367,39 @@ export default function AdminRafflePage() {
                       <th className="text-left p-3 text-sm font-semibold text-textPrimary">전화번호</th>
                       <th className="text-left p-3 text-sm font-semibold text-textPrimary">지역</th>
                       <th className="text-left p-3 text-sm font-semibold text-textPrimary">응모일시</th>
+                      <th className="text-left p-3 text-sm font-semibold text-textPrimary">상태</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {entries.map((entry) => (
-                      <tr key={entry.id} className="border-b border-border">
+                    {entries.map((entry, index) => (
+                      <tr key={entry.id || `entry-${index}`} className="border-b border-border">
                         <td className="p-3 font-semibold text-textPrimary">{entry.name}</td>
                         <td className="p-3">
-                          <a
-                            href={`tel:${entry.phone}`}
-                            className="text-primary font-semibold hover:underline"
-                          >
-                            {entry.phone}
-                          </a>
+                          {entry.phone !== '-' ? (
+                            <a
+                              href={`tel:${entry.phone}`}
+                              className="text-primary font-semibold hover:underline"
+                            >
+                              {entry.phone}
+                            </a>
+                          ) : (
+                            <span className="text-textSecondary">-</span>
+                          )}
                         </td>
                         <td className="p-3 text-textSecondary">{entry.survey_region || '-'}</td>
                         <td className="p-3 text-textSecondary">
-                          {formatDate(entry.created_at, 'datetime')}
+                          {formatDate(entry.survey_created_at || entry.created_at, 'datetime')}
+                        </td>
+                        <td className="p-3">
+                          {entry.has_raffle_entry === false ? (
+                            <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
+                              2단계 완료 (추첨 미응모)
+                            </span>
+                          ) : (
+                            <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                              추첨 응모 완료
+                            </span>
+                          )}
                         </td>
                       </tr>
                     ))}
