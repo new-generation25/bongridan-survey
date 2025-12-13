@@ -698,6 +698,22 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
           });
         }
 
+        // 이미 스캐너가 존재하면 먼저 정리
+        if (qrCodeRef.current) {
+          console.log('Previous scanner exists, cleaning up first...');
+          try {
+            await qrCodeRef.current.stop();
+          } catch (e) {
+            console.log('Stop existing scanner:', e);
+          }
+          try {
+            qrCodeRef.current.clear();
+          } catch (e) {
+            console.log('Clear existing scanner:', e);
+          }
+          qrCodeRef.current = null;
+        }
+
         // 컴포넌트가 언마운트되었으면 중단
         if (!isMountedRef.current) {
           return;
@@ -713,6 +729,9 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
           }
           return;
         }
+
+        // DOM 요소 내부 초기화 (이전 스캐너의 잔재 제거)
+        qrReaderElement.innerHTML = '';
 
         scanner = new Html5Qrcode('qr-reader');
         qrCodeRef.current = scanner;
@@ -872,11 +891,20 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       const cleanupScanner = async () => {
         if (qrCodeRef.current && !isCleaningUpRef.current) {
           isCleaningUpRef.current = true;
+          const scannerToClean = qrCodeRef.current;
           try {
-            await qrCodeRef.current.stop();
-            qrCodeRef.current.clear();
-          } catch (err) {
-            console.error('Scanner cleanup error:', err);
+            // stop() 에러를 개별적으로 처리 (이미 정지된 경우 에러 무시)
+            try {
+              await scannerToClean.stop();
+            } catch (stopErr) {
+              console.log('Scanner stop (may be already stopped):', stopErr);
+            }
+            // clear() 에러를 개별적으로 처리
+            try {
+              scannerToClean.clear();
+            } catch (clearErr) {
+              console.log('Scanner clear error:', clearErr);
+            }
           } finally {
             qrCodeRef.current = null;
             isCleaningUpRef.current = false;
@@ -934,8 +962,17 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       // 카메라 재시작 (다음 고객을 위해) - 스캐너 cleanup이 완료될 때까지 대기
       const waitForCleanup = () => {
         return new Promise<void>((resolve) => {
+          let attempts = 0;
+          const maxAttempts = 30; // 최대 3초 대기 (100ms * 30)
           const checkCleanup = () => {
+            attempts++;
             if (!isCleaningUpRef.current && qrCodeRef.current === null) {
+              resolve();
+            } else if (attempts >= maxAttempts) {
+              // 최대 시도 횟수 초과 - 강제로 진행
+              console.log('Cleanup wait timeout, forcing continue...');
+              qrCodeRef.current = null;
+              isCleaningUpRef.current = false;
               resolve();
             } else {
               setTimeout(checkCleanup, 100);
