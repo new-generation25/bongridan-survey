@@ -33,6 +33,7 @@ export default function AdminStoresPage() {
   });
   const [generatingQR, setGeneratingQR] = useState<string | null>(null);
   const [baseUrl, setBaseUrl] = useState('');
+  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
 
   useEffect(() => {
     const token = storage.get<string>('admin_token');
@@ -152,6 +153,45 @@ export default function AdminStoresPage() {
     }
   };
 
+  const handleToggleStatus = async (storeId: string, currentStatus: boolean) => {
+    if (!confirm(`가맹점을 ${currentStatus ? '비활성' : '활성'}으로 변경하시겠습니까?`)) {
+      return;
+    }
+
+    setUpdatingStatus(storeId);
+    try {
+      const token = storage.get<string>('admin_token');
+      const response = await fetch(`/api/admin/stores/${storeId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'x-admin-token': token || '',
+        },
+        body: JSON.stringify({
+          is_active: !currentStatus,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        alert(result.message || '상태 변경에 실패했습니다.');
+        return;
+      }
+
+      if (result.success) {
+        // 목록 새로고침
+        fetchStores();
+      }
+    } catch (error) {
+      console.error('Toggle status error:', error);
+      alert('네트워크 오류가 발생했습니다.');
+    } finally {
+      setUpdatingStatus(null);
+    }
+  };
+
   const handleLogout = () => {
     storage.remove('admin_token');
     router.push('/admin');
@@ -233,15 +273,18 @@ export default function AdminStoresPage() {
                       {formatCurrency(store.unsettled_amount)}
                     </td>
                     <td className="p-3 text-center">
-                      <span
-                        className={`px-2 py-1 rounded text-xs font-semibold ${
+                      <button
+                        onClick={() => handleToggleStatus(store.id, store.is_active)}
+                        disabled={updatingStatus === store.id}
+                        className={`px-3 py-1 rounded text-xs font-semibold transition-colors ${
                           store.is_active
-                            ? 'bg-success bg-opacity-10 text-success'
-                            : 'bg-gray-200 text-gray-600'
-                        }`}
+                            ? 'bg-success bg-opacity-10 text-success hover:bg-success hover:bg-opacity-20'
+                            : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                        } ${updatingStatus === store.id ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                        title={store.is_active ? '클릭하여 비활성화' : '클릭하여 활성화'}
                       >
-                        {store.is_active ? '활성' : '비활성'}
-                      </span>
+                        {updatingStatus === store.id ? '변경 중...' : store.is_active ? '활성' : '비활성'}
+                      </button>
                     </td>
                     <td className="p-3 text-center">
                       <Button
