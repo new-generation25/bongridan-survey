@@ -601,17 +601,21 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       // API의 total_amount는 단일 쿠폰 금액이므로 500원 사용
       const addedAmount = 500;
       
-      // 카메라 일시 정지 (검정 화면 표시)
-      setCameraPaused(true);
-      // 카메라 스트림을 일시적으로 숨기기 위해 오버레이 표시
-      
       // 누적 금액 업데이트 (함수형 업데이트로 최신 값 사용)
-      // 주의: 통계 업데이트는 적립 버튼을 눌렀을 때만 실행됨 (handleApplyCoupons에서)
       setTotalAmount((prev) => prev + addedAmount);
       setScanCount((prev) => prev + 1);
       
-      // 성공 플래시 효과는 적립 버튼에서 처리하므로 여기서는 제거
-      // (handleApplyCoupons에서 일괄 처리)
+      // 성공 플래시 효과 (검정색 깜박임 + 500원 적립 효과)
+      setFlashAmount(addedAmount);
+      setShowSuccessFlash(true);
+      setCameraPaused(true);
+      
+      // 0.5초 후 카메라 재개
+      setTimeout(() => {
+        setShowSuccessFlash(false);
+        setFlashAmount(0);
+        setCameraPaused(false);
+      }, 500);
       
       setIsProcessing(false);
       processingCouponsRef.current.delete(couponId); // 처리 중인 쿠폰 제거 (성공)
@@ -735,16 +739,22 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
               }
 
               if (couponId) {
-                // 이미 촬영 목록에 있는지 확인 (ref 사용하여 최신 값 참조)
-                if (pendingCouponsRef.current.some(c => c.couponId === couponId)) {
-                  return; // 에러 메시지 표시하지 않고 무시
+                // 이미 처리 중이거나 처리 완료된 쿠폰인지 확인
+                if (processingCouponsRef.current.has(couponId) || scannedCouponsRef.current.has(couponId)) {
+                  setError('이미 사용한 쿠폰입니다.');
+                  if (errorTimeoutRef.current) {
+                    clearTimeout(errorTimeoutRef.current);
+                  }
+                  errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
+                  return;
                 }
 
-                // 촬영 목록에 추가 (ref와 state 모두 업데이트)
-                const newPendingCoupon = { couponId, timestamp: now };
-                pendingCouponsRef.current = [...pendingCouponsRef.current, newPendingCoupon];
-                setPendingCoupons(prev => [...prev, newPendingCoupon]);
-                addDebugLog('QR 코드 촬영됨', { couponId, 촬영개수: pendingCouponsRef.current.length });
+                // 자동으로 적립 처리 시작
+                processingCouponsRef.current.add(couponId);
+                handleCouponValidationById(couponId).catch((error) => {
+                  console.error('Auto-apply coupon error:', error);
+                  processingCouponsRef.current.delete(couponId);
+                });
               } else {
                 setError('유효하지 않은 QR 코드입니다.');
                 if (errorTimeoutRef.current) {
@@ -792,67 +802,9 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
     setScanning(true);
   };
 
-  // 적립 버튼 핸들러: 촬영한 모든 QR 코드를 일괄 처리
-  const handleApplyCoupons = useCallback(async () => {
-    if (pendingCoupons.length === 0) {
-      setError('적립할 쿠폰이 없습니다.');
-      if (errorTimeoutRef.current) {
-        clearTimeout(errorTimeoutRef.current);
-      }
-      errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
-      return;
-    }
 
-    setIsProcessing(true);
-    setError('');
-
-    let successCount = 0;
-    let totalAddedAmount = 0;
-
-    // 촬영한 모든 쿠폰을 순차적으로 처리
-    for (const pendingCoupon of pendingCoupons) {
-      try {
-        const result = await handleCouponValidationById(pendingCoupon.couponId);
-        if (result) {
-          successCount++;
-          totalAddedAmount += 500; // 쿠폰당 500원
-        }
-      } catch (error) {
-        console.error('Coupon processing error:', error);
-        // 개별 쿠폰 처리 실패는 계속 진행
-      }
-    }
-
-    // 처리 완료 후 촬영 목록 초기화 (ref와 state 모두 초기화)
-    pendingCouponsRef.current = [];
-    setPendingCoupons([]);
-    setIsProcessing(false);
-
-    // 통계 업데이트 (적립 버튼을 눌렀을 때만 실행)
-    if (successCount > 0 && storeId) {
-      try {
-        await fetchStoreStats(storeId);
-      } catch (statsError) {
-        console.error('Fetch stats error in handleApplyCoupons:', statsError);
-      }
-    }
-
-    // 성공 메시지 표시
-    if (successCount > 0) {
-      setFlashAmount(totalAddedAmount);
-      setShowSuccessFlash(true);
-      setCameraPaused(true);
-      setTimeout(() => {
-        setShowSuccessFlash(false);
-        setFlashAmount(0);
-        setCameraPaused(false);
-      }, 1000);
-    }
-
-    addDebugLog('적립 완료', { 성공개수: successCount, 총개수: pendingCoupons.length, 총금액: totalAddedAmount });
-  }, [pendingCoupons, handleCouponValidationById, fetchStoreStats, storeId, addDebugLog]);
-
-  const handleComplete = async () => {
+  // 쿠폰 사용하기 버튼 핸들러: 통계 업데이트 및 완료 처리
+  const handleUseCoupons = async () => {
     try {
       // 에러 메시지와 타임아웃 즉시 제거
       if (errorTimeoutRef.current) {
@@ -861,17 +813,17 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       }
       setError('');
       
-      // 통계 업데이트 (에러가 발생해도 계속 진행)
+      // 통계 업데이트 (적립된 금액이 있을 때만)
       if (totalAmount > 0 && storeId) {
         try {
           await fetchStoreStats(storeId);
         } catch (statsError) {
-          // 통계 조회 실패는 무시 (에러 메시지 표시하지 않음)
-          console.error('Fetch stats error in handleComplete:', statsError);
+          console.error('Fetch stats error in handleUseCoupons:', statsError);
+          // 통계 조회 실패해도 계속 진행
         }
       }
       
-      // 카메라 중지 (에러가 발생해도 계속 진행)
+      // 카메라 중지
       if (qrCodeRef.current) {
         try {
           await qrCodeRef.current.stop();
@@ -891,18 +843,23 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       setScanCount(0);
       scannedCouponsRef.current.clear();
       processingCouponsRef.current.clear();
-      pendingCouponsRef.current = [];
-      setPendingCoupons([]);
       setScanning(false);
       setCameraPaused(false);
       setShowSuccessFlash(false);
       setFlashAmount(0);
-      setError(''); // 다시 한 번 확실히 제거
-    } catch (error) {
-      console.error('Complete error:', error);
-      // 에러가 발생해도 상태는 리셋
-      setScanning(false);
       setError('');
+      
+      // 카메라 재시작 (다음 고객을 위해)
+      setTimeout(() => {
+        setScanning(true);
+      }, 100);
+    } catch (error) {
+      console.error('Use coupons error:', error);
+      setError('처리 중 오류가 발생했습니다.');
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+      }
+      errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
     }
   };
 
@@ -1001,7 +958,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
               {/* 적립 금액 표시 (카메라 위쪽) - 더 크고 명확하게 */}
               {(totalAmount > 0 || scanCount > 0) && (
                 <div className="bg-green-50 border-4 border-green-500 rounded-xl p-6 text-center shadow-2xl transform transition-all duration-300 scale-105">
-                  <p className="text-base text-green-700 mb-2 font-semibold">총 적립 금액</p>
+                  <p className="text-base text-green-700 mb-2 font-semibold">이번 회차 누적 금액</p>
                   <p 
                     className="text-5xl font-bold text-green-800 transition-all duration-300"
                     style={{
@@ -1012,7 +969,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
                   </p>
                   {scanCount > 0 && (
                     <p className="text-sm text-green-600 mt-2 font-semibold">
-                      ({scanCount}개 쿠폰 사용)
+                      ({scanCount}개 쿠폰 적립)
                     </p>
                   )}
                 </div>
@@ -1022,6 +979,13 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
               {isProcessing && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
                   <p className="text-blue-700 font-medium">적립 처리 중...</p>
+                </div>
+              )}
+
+              {/* 에러 메시지 - 카메라 바로 위에 표시 */}
+              {error && (
+                <div className="bg-red-50 border-2 border-red-400 rounded-lg p-4 text-center">
+                  <p className="text-red-700 font-semibold text-lg">⚠️ {error}</p>
                 </div>
               )}
 
@@ -1037,43 +1001,18 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
                   </div>
                 )}
               </div>
-
-              {/* 촬영한 쿠폰 목록 표시 */}
-              {pendingCoupons.length > 0 && (
-                <div className="bg-blue-50 border-2 border-blue-400 rounded-lg p-4">
-                  <p className="text-blue-800 font-semibold mb-2 text-center">
-                    촬영한 쿠폰 ({pendingCoupons.length}개)
-                  </p>
-                  <div className="space-y-2 max-h-40 overflow-y-auto">
-                    {pendingCoupons.map((coupon, idx) => (
-                      <div key={idx} className="bg-white rounded p-2 text-xs font-mono text-gray-700">
-                        {idx + 1}. {coupon.couponId.substring(0, 8)}...
-                      </div>
-                    ))}
-                  </div>
-                  <Button
-                    onClick={handleApplyCoupons}
-                    variant="primary"
-                    className="bg-blue-600 hover:bg-blue-700 text-white mt-3"
-                    fullWidth
-                    size="lg"
-                    disabled={isProcessing}
-                  >
-                    ✅ 적립하기 ({pendingCoupons.length}개)
-                  </Button>
-                </div>
-              )}
               
-              {/* 사용 완료 버튼 - 금액이 있을 때만 표시 */}
+              {/* 쿠폰 사용하기 버튼 - 금액이 있을 때만 표시 */}
               {totalAmount > 0 && (
                 <Button
-                  onClick={handleComplete}
+                  onClick={handleUseCoupons}
                   variant="primary"
                   className="bg-green-600 hover:bg-green-700 text-white border-green-600"
                   fullWidth
                   size="lg"
+                  disabled={isProcessing}
                 >
-                  ✅ 사용 완료
+                  ✅ 쿠폰 사용하기
                 </Button>
               )}
 
