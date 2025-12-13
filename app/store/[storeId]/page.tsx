@@ -750,17 +750,21 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
                 }
 
                 // 자동으로 적립 처리 시작
-                processingCouponsRef.current.add(couponId);
+                // processingCouponsRef는 handleCouponValidationById 내부에서 관리됨
                 handleCouponValidationById(couponId)
                   .then((success) => {
                     // 적립 성공 시에만 마지막 스캔 시간 업데이트 (1초 차이 보장)
                     if (success) {
                       lastScanTimeRef.current = Date.now();
+                    } else {
+                      // 실패한 경우에도 시간 업데이트하여 다음 스캔 허용 (너무 빠른 재시도 방지)
+                      lastScanTimeRef.current = Date.now();
                     }
                   })
                   .catch((error) => {
                     console.error('Auto-apply coupon error:', error);
-                    processingCouponsRef.current.delete(couponId);
+                    // 에러 발생 시에도 시간 업데이트하여 다음 스캔 허용
+                    lastScanTimeRef.current = Date.now();
                   });
               } else {
                 setError('유효하지 않은 QR 코드입니다.');
