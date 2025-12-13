@@ -9,7 +9,7 @@ import Loading from '@/components/ui/Loading';
 import { storage, formatDate } from '@/lib/utils';
 
 interface RaffleEntry {
-  id: string;
+  id: string | null;
   created_at: string;
   survey_id: string;
   name: string;
@@ -17,6 +17,7 @@ interface RaffleEntry {
   agreed_privacy: boolean;
   survey_region?: string;
   survey_created_at?: string;
+  has_raffle_entry?: boolean; // 추첨 응모 여부
 }
 
 interface Winner {
