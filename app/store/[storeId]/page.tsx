@@ -58,6 +58,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
   const lastScanTimeRef = useRef<number>(0); // 마지막 QR 코드 인식 시간 (밀리초)
   const handleCouponValidationByIdRef = useRef<((couponId: string) => Promise<boolean>) | null>(null);
   const isMountedRef = useRef<boolean>(true); // 컴포넌트 마운트 상태 추적
+  const isCleaningUpRef = useRef<boolean>(false); // 스캐너 정리 중 여부
 
   // 통계 조회 함수
   const fetchStoreStats = useCallback(async (storeIdValue: string) => {
@@ -660,6 +661,14 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
     handleCouponValidationByIdRef.current = handleCouponValidationById;
   }, [handleCouponValidationById]);
 
+  // 컴포넌트 마운트/언마운트 관리
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   // 카메라 스트림 시작 (자동 스캔, 1초에 1번씩만 인식)
   useEffect(() => {
     // storeId와 storeName이 설정되면 자동으로 스캔 시작
@@ -674,12 +683,34 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
 
     const startScanning = async () => {
       try {
+        // 이전 스캐너가 정리 중이면 대기
+        if (isCleaningUpRef.current) {
+          console.log('Waiting for previous scanner cleanup...');
+          await new Promise<void>((resolve) => {
+            const checkCleanup = () => {
+              if (!isCleaningUpRef.current) {
+                resolve();
+              } else {
+                setTimeout(checkCleanup, 100);
+              }
+            };
+            checkCleanup();
+          });
+        }
+
+        // 컴포넌트가 언마운트되었으면 중단
+        if (!isMountedRef.current) {
+          return;
+        }
+
         // DOM 엘리먼트가 존재하는지 확인
         const qrReaderElement = document.getElementById('qr-reader');
         if (!qrReaderElement) {
           console.error('qr-reader element not found in DOM');
-          setError('QR 스캐너를 초기화할 수 없습니다. 페이지를 새로고침해주세요.');
-          setScanning(false);
+          if (isMountedRef.current) {
+            setError('QR 스캐너를 초기화할 수 없습니다. 페이지를 새로고침해주세요.');
+            setScanning(false);
+          }
           return;
         }
 
@@ -692,8 +723,10 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
           devices = await Html5Qrcode.getCameras();
         } catch (cameraError) {
           console.error('Get cameras error:', cameraError);
-          setError('카메라에 접근할 수 없습니다. 카메라 권한을 확인해주세요.');
-          setScanning(false);
+          if (isMountedRef.current) {
+            setError('카메라에 접근할 수 없습니다. 카메라 권한을 확인해주세요.');
+            setScanning(false);
+          }
           return;
         }
         let cameraId: string | null = null;
@@ -825,8 +858,10 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         );
       } catch (error) {
         console.error('Scanner initialization error:', error);
-        setError('QR 스캐너를 시작할 수 없습니다. 카메라 권한을 확인해주세요.');
-        setScanning(false);
+        if (isMountedRef.current) {
+          setError('QR 스캐너를 시작할 수 없습니다. 카메라 권한을 확인해주세요.');
+          setScanning(false);
+        }
       }
     };
 
@@ -834,11 +869,21 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
 
     return () => {
       // qrCodeRef.current를 사용하여 현재 활성화된 스캐너 정리
-      if (qrCodeRef.current) {
-        qrCodeRef.current.stop().catch(console.error);
-        qrCodeRef.current.clear();
-        qrCodeRef.current = null;
-      }
+      const cleanupScanner = async () => {
+        if (qrCodeRef.current && !isCleaningUpRef.current) {
+          isCleaningUpRef.current = true;
+          try {
+            await qrCodeRef.current.stop();
+            qrCodeRef.current.clear();
+          } catch (err) {
+            console.error('Scanner cleanup error:', err);
+          } finally {
+            qrCodeRef.current = null;
+            isCleaningUpRef.current = false;
+          }
+        }
+      };
+      cleanupScanner();
       if (errorTimeoutRef.current) {
         clearTimeout(errorTimeoutRef.current);
       }
@@ -861,7 +906,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         errorTimeoutRef.current = null;
       }
       setError('');
-      
+
       // 통계 업데이트 (적립된 금액이 있을 때만)
       if (totalAmount > 0 && storeId) {
         try {
@@ -871,10 +916,10 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
           // 통계 조회 실패해도 계속 진행
         }
       }
-      
+
       // 먼저 스캔 상태를 false로 설정하여 useEffect cleanup이 실행되도록 함
       setScanning(false);
-      
+
       // 상태 리셋
       setTotalAmount(0);
       setScanCount(0);
@@ -885,18 +930,41 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       setFlashAmount(0);
       setError('');
       lastScanTimeRef.current = 0; // 마지막 인식 시간 초기화
-      
-      // 카메라 재시작 (다음 고객을 위해) - 약간의 딜레이를 두어 cleanup이 완료되도록 함
-      setTimeout(() => {
+
+      // 카메라 재시작 (다음 고객을 위해) - 스캐너 cleanup이 완료될 때까지 대기
+      const waitForCleanup = () => {
+        return new Promise<void>((resolve) => {
+          const checkCleanup = () => {
+            if (!isCleaningUpRef.current && qrCodeRef.current === null) {
+              resolve();
+            } else {
+              setTimeout(checkCleanup, 100);
+            }
+          };
+          // 최소 500ms 대기 후 cleanup 상태 확인
+          setTimeout(checkCleanup, 500);
+        });
+      };
+
+      await waitForCleanup();
+
+      // 컴포넌트가 아직 마운트되어 있으면 스캔 재시작
+      if (isMountedRef.current) {
         setScanning(true);
-      }, 300);
+      }
     } catch (error) {
       console.error('Use coupons error:', error);
-      setError('처리 중 오류가 발생했습니다.');
-      if (errorTimeoutRef.current) {
-        clearTimeout(errorTimeoutRef.current);
+      if (isMountedRef.current) {
+        setError('처리 중 오류가 발생했습니다.');
+        if (errorTimeoutRef.current) {
+          clearTimeout(errorTimeoutRef.current);
+        }
+        errorTimeoutRef.current = setTimeout(() => {
+          if (isMountedRef.current) {
+            setError('');
+          }
+        }, 3000);
       }
-      errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
     }
   };
 
