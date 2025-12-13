@@ -271,7 +271,7 @@ export default function AdminStoresPage() {
                     key={store.id}
                     className="border-b border-border hover:bg-gray-50 transition-colors"
                   >
-                    <td className="p-3 text-textSecondary">{index + 1}</td>
+                    <td className="p-3 text-textSecondary">{store.id}</td>
                     <td className="p-3">
                       <Link
                         href={`/admin/stores/${store.id}`}
