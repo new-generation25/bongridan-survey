@@ -707,8 +707,8 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
                 return; // 디버그 로그 없이 무시
               }
 
-              // 마지막 인식 시간 업데이트
-              lastScanTimeRef.current = now;
+              // 마지막 인식 시간은 적립 성공 후에 업데이트됨 (handleCouponValidationById 내부에서)
+              // 여기서는 업데이트하지 않음
 
               // URL 형식인지 확인
               let couponId: string | null = null;
@@ -751,10 +751,17 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
 
                 // 자동으로 적립 처리 시작
                 processingCouponsRef.current.add(couponId);
-                handleCouponValidationById(couponId).catch((error) => {
-                  console.error('Auto-apply coupon error:', error);
-                  processingCouponsRef.current.delete(couponId);
-                });
+                handleCouponValidationById(couponId)
+                  .then((success) => {
+                    // 적립 성공 시에만 마지막 스캔 시간 업데이트 (1초 차이 보장)
+                    if (success) {
+                      lastScanTimeRef.current = Date.now();
+                    }
+                  })
+                  .catch((error) => {
+                    console.error('Auto-apply coupon error:', error);
+                    processingCouponsRef.current.delete(couponId);
+                  });
               } else {
                 setError('유효하지 않은 QR 코드입니다.');
                 if (errorTimeoutRef.current) {
