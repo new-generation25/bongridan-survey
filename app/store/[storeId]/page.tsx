@@ -52,6 +52,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
   } | null>(null);
   const scannedCouponsRef = useRef<Set<string>>(new Set());
   const processingCouponsRef = useRef<Set<string>>(new Set()); // 처리 중인 쿠폰 ID 추적
+  const pendingCouponsRef = useRef<Array<{couponId: string, timestamp: number}>>([]); // 촬영한 QR 코드 목록 (ref로 관리)
   const qrCodeRef = useRef<Html5Qrcode | null>(null);
   const errorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastScanTimeRef = useRef<number>(0); // 마지막 QR 코드 인식 시간 (밀리초)
@@ -738,15 +739,17 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
               }
 
               if (couponId) {
-                // 이미 촬영 목록에 있는지 확인
-                if (pendingCoupons.some(c => c.couponId === couponId)) {
+                // 이미 촬영 목록에 있는지 확인 (ref 사용하여 최신 값 참조)
+                if (pendingCouponsRef.current.some(c => c.couponId === couponId)) {
                   addDebugLog('QR code already in pending list', {couponId});
                   return; // 에러 메시지 표시하지 않고 무시
                 }
 
-                // 촬영 목록에 추가
-                setPendingCoupons(prev => [...prev, { couponId, timestamp: now }]);
-                addDebugLog('QR code added to pending list', { couponId, pendingCount: pendingCoupons.length + 1 });
+                // 촬영 목록에 추가 (ref와 state 모두 업데이트)
+                const newPendingCoupon = { couponId, timestamp: now };
+                pendingCouponsRef.current = [...pendingCouponsRef.current, newPendingCoupon];
+                setPendingCoupons(prev => [...prev, newPendingCoupon]);
+                addDebugLog('QR code added to pending list', { couponId, pendingCount: pendingCouponsRef.current.length });
               } else {
                 addDebugLog('Invalid QR code (no couponId)', {decodedText});
                 setError('유효하지 않은 QR 코드입니다.');
@@ -788,7 +791,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         clearTimeout(errorTimeoutRef.current);
       }
     };
-  }, [scanning, storeId, storeName, addDebugLog, pendingCoupons]);
+  }, [scanning, storeId, storeName, addDebugLog]);
 
   const handleStartScan = () => {
     setError('');
@@ -827,7 +830,8 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       }
     }
 
-    // 처리 완료 후 촬영 목록 초기화
+    // 처리 완료 후 촬영 목록 초기화 (ref와 state 모두 초기화)
+    pendingCouponsRef.current = [];
     setPendingCoupons([]);
     setIsProcessing(false);
 
@@ -894,6 +898,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       setScanCount(0);
       scannedCouponsRef.current.clear();
       processingCouponsRef.current.clear();
+      pendingCouponsRef.current = [];
       setPendingCoupons([]);
       setScanning(false);
       setCameraPaused(false);
