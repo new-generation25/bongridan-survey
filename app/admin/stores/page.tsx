@@ -36,9 +36,16 @@ export default function AdminStoresPage() {
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
 
   useEffect(() => {
-    const token = storage.get<string>('admin_token');
-    if (!token) {
-      router.push('/admin');
+    const checkAuth = () => {
+      const token = storage.get<string>('admin_token');
+      if (!token) {
+        router.push('/admin');
+        return false;
+      }
+      return true;
+    };
+
+    if (!checkAuth()) {
       return;
     }
 
@@ -46,6 +53,16 @@ export default function AdminStoresPage() {
     setBaseUrl(url);
 
     fetchStores();
+
+    // 페이지 포커스 시 로그인 정보 재확인
+    const handleFocus = () => {
+      checkAuth();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [router]);
 
   const fetchStores = async () => {
@@ -207,6 +224,13 @@ export default function AdminStoresPage() {
         {/* 헤더 */}
         <div className="flex justify-between items-center">
           <div>
+            <div className="flex items-center gap-3 mb-2">
+              <Link href="/admin/dashboard">
+                <Button variant="ghost" size="sm">
+                  ← 대시보드
+                </Button>
+              </Link>
+            </div>
             <h1 className="text-3xl font-bold text-textPrimary">
               🏪 가맹점 관리
             </h1>

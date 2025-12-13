@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Loading from '@/components/ui/Loading';
@@ -151,6 +152,13 @@ export default function AdminRafflePage() {
         {/* 헤더 */}
         <div className="flex justify-between items-center">
           <div>
+            <div className="flex items-center gap-3 mb-2">
+              <Link href="/admin/dashboard">
+                <Button variant="ghost" size="sm">
+                  ← 대시보드
+                </Button>
+              </Link>
+            </div>
             <h1 className="text-3xl font-bold text-textPrimary">
               🎁 추첨 관리
             </h1>
@@ -158,9 +166,11 @@ export default function AdminRafflePage() {
               추첨 응모자 관리 및 당첨자 선정
             </p>
           </div>
-          <Button onClick={handleLogout} variant="outline">
-            로그아웃
-          </Button>
+          <div className="flex gap-3">
+            <Button onClick={handleLogout} variant="outline">
+              로그아웃
+            </Button>
+          </div>
         </div>
 
         {/* 통계 */}
@@ -205,7 +215,7 @@ export default function AdminRafflePage() {
           <Card>
             <div className="space-y-4">
               <h2 className="text-xl font-semibold text-textPrimary">
-                추첨 실행
+                랜덤 추첨 실행
               </h2>
               <div className="bg-primary bg-opacity-10 rounded-lg p-4 space-y-2">
                 <p className="font-semibold text-textPrimary">상금 구조</p>
@@ -224,9 +234,35 @@ export default function AdminRafflePage() {
                 disabled={drawing || eligibleCount < 5 || totalCount < 7}
                 size="lg"
                 fullWidth
+                className="bg-primary hover:bg-blue-600"
               >
-                {drawing ? '추첨 중...' : '🎲 추첨 실행 (7명 선정)'}
+                {drawing ? '랜덤 추첨 중...' : '🎲 랜덤 추첨 실행 (7명 선정)'}
               </Button>
+            </div>
+          </Card>
+        )}
+        
+        {/* 추첨 조건 미충족 시 안내 */}
+        {(eligibleCount < 5 || totalCount < 7) && (
+          <Card>
+            <div className="space-y-4">
+              <h2 className="text-xl font-semibold text-textPrimary">
+                랜덤 추첨 실행
+              </h2>
+              <div className="bg-warning bg-opacity-10 rounded-lg p-4 space-y-2">
+                <p className="font-semibold text-warning">추첨 조건 미충족</p>
+                <ul className="text-sm text-textSecondary space-y-1">
+                  {eligibleCount < 5 && (
+                    <li>⚠️ 2단계 설문 완료자: {eligibleCount}명 / 필요: 5명 이상</li>
+                  )}
+                  {totalCount < 7 && (
+                    <li>⚠️ 추첨 응모자: {totalCount}명 / 필요: 7명 이상</li>
+                  )}
+                </ul>
+              </div>
+              <p className="text-sm text-textSecondary">
+                추첨 조건을 충족하면 랜덤 추첨 버튼이 활성화됩니다.
+              </p>
             </div>
           </Card>
         )}

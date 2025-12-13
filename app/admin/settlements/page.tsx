@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Loading from '@/components/ui/Loading';
@@ -175,6 +176,13 @@ export default function AdminSettlementsPage() {
         {/* 헤더 */}
         <div className="flex justify-between items-center">
           <div>
+            <div className="flex items-center gap-3 mb-2">
+              <Link href="/admin/dashboard">
+                <Button variant="ghost" size="sm">
+                  ← 대시보드
+                </Button>
+              </Link>
+            </div>
             <h1 className="text-3xl font-bold text-textPrimary">
               💰 정산 관리
             </h1>
