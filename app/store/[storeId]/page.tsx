@@ -228,20 +228,29 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       setTotalAmount((prev) => prev + addedAmount);
       setScanCount((prev) => prev + 1);
       
-      // 통계 업데이트
+      // 통계 업데이트 (에러가 발생해도 에러 메시지 표시하지 않음)
       if (storeId) {
-        fetchStoreStats(storeId);
+        fetchStoreStats(storeId).catch((statsError) => {
+          // 통계 조회 실패는 무시 (에러 메시지 표시하지 않음)
+          console.error('Fetch stats error:', statsError);
+        });
       }
       
       // 성공 플래시 효과 (검정색 깜박임 + 500원 적립 효과)
       setFlashAmount(addedAmount);
       setShowSuccessFlash(true);
       
-      // 0.5초 후 카메라 재개
+      // 0.5초 후 카메라 재개 및 에러 메시지 재확인
       setTimeout(() => {
         setShowSuccessFlash(false);
         setFlashAmount(0);
         setCameraPaused(false);
+        // 플래시 효과 종료 후에도 에러 메시지가 없는지 확인
+        if (errorTimeoutRef.current) {
+          clearTimeout(errorTimeoutRef.current);
+          errorTimeoutRef.current = null;
+        }
+        setError(''); // 플래시 효과 종료 후에도 에러 메시지 제거
       }, 500);
       
       setIsProcessing(false);
@@ -470,15 +479,6 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         errorTimeoutRef.current = null;
       }
       setError(''); // 성공 시 에러 메시지 즉시 제거
-      
-      // 추가 확인: 성공 후에도 에러 메시지가 없는지 다시 확인
-      setTimeout(() => {
-        if (errorTimeoutRef.current) {
-          clearTimeout(errorTimeoutRef.current);
-          errorTimeoutRef.current = null;
-        }
-        setError('');
-      }, 0);
 
       // 누적 금액 업데이트 (카메라 유지)
       // API의 total_amount는 단일 쿠폰 금액이므로 500원 사용
@@ -492,15 +492,29 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       setTotalAmount((prev) => prev + addedAmount);
       setScanCount((prev) => prev + 1);
       
+      // 통계 업데이트 (에러가 발생해도 에러 메시지 표시하지 않음)
+      if (storeId) {
+        fetchStoreStats(storeId).catch((statsError) => {
+          // 통계 조회 실패는 무시 (에러 메시지 표시하지 않음)
+          console.error('Fetch stats error:', statsError);
+        });
+      }
+      
       // 성공 플래시 효과 (검정색 깜박임 + 500원 적립 효과)
       setFlashAmount(addedAmount);
       setShowSuccessFlash(true);
       
-      // 0.5초 후 카메라 재개
+      // 0.5초 후 카메라 재개 및 에러 메시지 재확인
       setTimeout(() => {
         setShowSuccessFlash(false);
         setFlashAmount(0);
         setCameraPaused(false);
+        // 플래시 효과 종료 후에도 에러 메시지가 없는지 확인
+        if (errorTimeoutRef.current) {
+          clearTimeout(errorTimeoutRef.current);
+          errorTimeoutRef.current = null;
+        }
+        setError(''); // 플래시 효과 종료 후에도 에러 메시지 제거
       }, 500);
       
       setIsProcessing(false);
@@ -660,25 +674,36 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
 
   const handleComplete = async () => {
     try {
-      // 통계 업데이트
+      // 에러 메시지와 타임아웃 즉시 제거
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+        errorTimeoutRef.current = null;
+      }
+      setError('');
+      
+      // 통계 업데이트 (에러가 발생해도 계속 진행)
       if (totalAmount > 0 && storeId) {
         try {
           await fetchStoreStats(storeId);
         } catch (statsError) {
+          // 통계 조회 실패는 무시 (에러 메시지 표시하지 않음)
           console.error('Fetch stats error in handleComplete:', statsError);
         }
       }
       
-      // 카메라 중지
-      if (qrCodeRef.current) {
+      // 카메라 중지 (에러가 발생해도 계속 진행)
+      const scanner = qrCodeRef.current;
+      if (scanner) {
         try {
-          await qrCodeRef.current.stop();
+          await scanner.stop();
         } catch (stopError) {
+          // 이미 정리된 경우 무시
           console.error('Stop scanner error:', stopError);
         }
         try {
-          qrCodeRef.current.clear();
+          scanner.clear();
         } catch (clearError) {
+          // 이미 정리된 경우 무시
           console.error('Clear scanner error:', clearError);
         }
         qrCodeRef.current = null;
@@ -690,9 +715,14 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       scannedCouponsRef.current.clear();
       setScanning(false);
       setCameraPaused(false);
-      setError('');
+      setShowSuccessFlash(false);
+      setFlashAmount(0);
+      setError(''); // 다시 한 번 확실히 제거
     } catch (error) {
       console.error('Complete error:', error);
+      // 에러가 발생해도 상태는 리셋
+      setScanning(false);
+      setError('');
     }
   };
 
