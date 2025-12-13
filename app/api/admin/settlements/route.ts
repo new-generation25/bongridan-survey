@@ -41,14 +41,15 @@ export async function GET(request: NextRequest) {
 
     const storesWithUnsettled = await Promise.all(
       (allStores || []).map(async (store) => {
-        // 전체 사용 금액
-        const { data: coupons } = await supabaseAdmin
+        // 전체 사용 건수 조회
+        const { count: usedCount } = await supabaseAdmin
           .from('coupons')
-          .select('amount')
+          .select('*', { count: 'exact', head: true })
           .eq('used_store_id', store.id)
           .eq('status', 'used');
 
-        const totalAmount = coupons?.reduce((sum, c) => sum + (c.amount || 500), 0) || 0;
+        // 정산 금액은 쿠폰 사용 건수 × 700원으로 계산
+        const totalAmount = (usedCount || 0) * 700;
 
         // 정산된 금액
         const { data: storeSettlements } = await supabaseAdmin
@@ -158,13 +159,14 @@ export async function POST(request: NextRequest) {
       .eq('id', store_id);
 
     // 미정산 금액 계산
-    const { data: coupons } = await supabaseAdmin
+    const { count: usedCount } = await supabaseAdmin
       .from('coupons')
-      .select('amount')
+      .select('*', { count: 'exact', head: true })
       .eq('used_store_id', store_id)
       .eq('status', 'used');
 
-    const totalAmount = coupons?.reduce((sum, c) => sum + (c.amount || 500), 0) || 0;
+    // 정산 금액은 쿠폰 사용 건수 × 700원으로 계산
+    const totalAmount = (usedCount || 0) * 700;
     const unsettledAmount = totalAmount - totalSettled;
 
     return NextResponse.json({

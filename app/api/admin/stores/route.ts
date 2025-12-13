@@ -39,13 +39,8 @@ export async function GET(request: NextRequest) {
           .eq('used_store_id', store.id)
           .eq('status', 'used');
 
-        const { data: totalCoupons } = await supabaseAdmin
-          .from('coupons')
-          .select('amount')
-          .eq('used_store_id', store.id)
-          .eq('status', 'used');
-
-        const totalAmount = totalCoupons?.reduce((sum, c) => sum + (c.amount || 500), 0) || 0;
+        // 정산 금액은 쿠폰 사용 건수 × 700원으로 계산
+        const totalAmount = (totalUsed || 0) * 700;
 
         // 정산된 금액 (settlements 테이블에서 합계)
         const { data: settlements } = await supabaseAdmin
