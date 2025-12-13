@@ -6,7 +6,7 @@ import QRCode from 'qrcode';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Loading from '@/components/ui/Loading';
-import { formatCurrency, formatDate, storage } from '@/lib/utils';
+import { formatCurrency, formatDate, storage, getKoreaTime } from '@/lib/utils';
 import type { Coupon } from '@/lib/types';
 
 export default function CouponPage({ params }: { params: Promise<{ id: string }> }) {
@@ -62,7 +62,9 @@ export default function CouponPage({ params }: { params: Promise<{ id: string }>
     return null;
   }
 
-  const isExpired = new Date(coupon.expires_at) < new Date();
+  // 한국 시간 기준으로 만료 여부 확인
+  const koreaNow = getKoreaTime();
+  const isExpired = new Date(coupon.expires_at) < koreaNow;
   const isUsed = coupon.status === 'used';
   const isStep2Completed = coupon.survey_stage_completed === 2; // 2단계 설문 완료 여부
 

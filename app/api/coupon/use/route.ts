@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin, supabaseHelpers } from '@/lib/supabase';
 import { ERROR_MESSAGES } from '@/lib/constants';
+import { getKoreaTodayStartISO } from '@/lib/utils';
 
 export async function POST(request: NextRequest) {
   try {
@@ -56,16 +57,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 가맹점 통계 조회
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // 가맹점 통계 조회 (한국 시간 기준)
+    const todayISO = getKoreaTodayStartISO();
 
     const { count: todayCount } = await supabaseAdmin
       .from('coupons')
       .select('*', { count: 'exact', head: true })
       .eq('used_store_id', store_id)
       .eq('status', 'used')
-      .gte('used_at', today.toISOString());
+      .gte('used_at', todayISO);
 
     const { count: totalCount } = await supabaseAdmin
       .from('coupons')

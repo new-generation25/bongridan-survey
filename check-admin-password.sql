@@ -17,3 +17,5 @@ WHERE key = 'admin_password';
 -- 또는 전체 설정 확인
 SELECT * FROM settings ORDER BY key;
 
+
+

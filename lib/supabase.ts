@@ -25,18 +25,20 @@ export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
 
 // Supabase 헬퍼 함수들
 export const supabaseHelpers = {
-  // 설문 중복 확인 (서버 사이드용)
+  // 설문 중복 확인 (서버 사이드용, 한국 시간 기준)
   async checkDuplicateSurvey(deviceId: string): Promise<boolean> {
     try {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      // 한국 시간 기준 오늘 시작 시간
+      const koreaTime = new Date();
+      const koreaToday = new Date(koreaTime.getTime() + (9 * 60 * 60 * 1000));
+      koreaToday.setUTCHours(0, 0, 0, 0);
 
       // 인덱스를 활용한 최적화된 쿼리
       const { data, error } = await supabaseAdmin
         .from('surveys')
         .select('id', { count: 'exact', head: false })
         .eq('device_id', deviceId)
-        .gte('created_at', today.toISOString())
+        .gte('created_at', koreaToday.toISOString())
         .limit(1)
         .maybeSingle();
 
@@ -88,10 +90,15 @@ export const supabaseHelpers = {
     }
   },
 
-  // 쿠폰 만료 시간 계산
+  // 쿠폰 만료 시간 계산 (한국 시간 기준)
   calculateExpiryDate(hours: number = 24): string {
-    const expiryDate = new Date();
-    expiryDate.setHours(expiryDate.getHours() + hours);
+    // 현재 시간을 UTC로 가져온 후, 한국 시간 기준으로 계산
+    const now = new Date();
+    // 한국 시간(UTC+9)으로 변환하여 계산
+    const koreaTime = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+    // 만료 시간 계산 (한국 시간 기준)
+    const expiryDate = new Date(koreaTime.getTime() + (hours * 60 * 60 * 1000));
+    // UTC로 변환하여 반환 (Supabase는 UTC로 저장)
     return expiryDate.toISOString();
   },
 
@@ -115,7 +122,12 @@ export const supabaseHelpers = {
       return { valid: false, message: '이미 사용된 쿠폰입니다' };
     }
 
-    if (new Date(coupon.expires_at) < new Date()) {
+    // 한국 시간 기준으로 만료 시간 비교
+    const now = new Date();
+    const koreaNow = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+    const expiresAt = new Date(coupon.expires_at);
+    
+    if (expiresAt < koreaNow) {
       return { valid: false, message: '쿠폰이 만료되었습니다 (24시간 초과)' };
     }
 

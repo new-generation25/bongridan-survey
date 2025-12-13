@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { ERROR_MESSAGES } from '@/lib/constants';
 import { verifyAdminToken } from '@/lib/auth';
+import { getKoreaTodayStartISO } from '@/lib/utils';
 import type { DashboardData } from '@/lib/types';
 
 export async function GET(request: NextRequest) {
@@ -14,9 +15,8 @@ export async function GET(request: NextRequest) {
         { status: 401 }
       );
     }
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayISO = today.toISOString();
+    // 한국 시간 기준 오늘 시작 시간
+    const todayISO = getKoreaTodayStartISO();
 
     // 오늘 통계
     const { count: todaySurveys } = await supabaseAdmin
@@ -100,21 +100,21 @@ export async function GET(request: NextRequest) {
       percentage: (count / (totalSurveys || 1)) * 100,
     }));
 
-    // 날짜별 통계 (최근 7일)
+    // 날짜별 통계 (최근 7일, 한국 시간 기준)
     const dates: string[] = [];
+    const koreaTime = new Date();
+    const koreaToday = new Date(koreaTime.getTime() + (9 * 60 * 60 * 1000));
     for (let i = 6; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
+      const date = new Date(koreaToday);
+      date.setUTCDate(date.getUTCDate() - i);
       dates.push(date.toISOString().split('T')[0]);
     }
 
     const byDate = await Promise.all(
       dates.map(async (date) => {
-        // 날짜 범위를 ISO 타임스탬프 형식으로 변환
-        const startDate = new Date(date);
-        startDate.setHours(0, 0, 0, 0);
-        const endDate = new Date(date);
-        endDate.setHours(23, 59, 59, 999);
+        // 날짜 범위를 ISO 타임스탬프 형식으로 변환 (한국 시간 기준)
+        const startDate = new Date(date + 'T00:00:00.000Z');
+        const endDate = new Date(date + 'T23:59:59.999Z');
 
         const { count: surveys } = await supabaseAdmin
           .from('surveys')

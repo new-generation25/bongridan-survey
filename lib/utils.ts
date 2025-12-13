@@ -22,15 +22,38 @@ export function getDeviceId(): string {
   return deviceId;
 }
 
-// 날짜 포맷팅
+// 한국 시간(KST, UTC+9) 가져오기
+export function getKoreaTime(): Date {
+  const now = new Date();
+  // UTC 시간에 9시간을 더해서 한국 시간으로 변환
+  const koreaTime = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+  return koreaTime;
+}
+
+// 한국 시간 기준 오늘 시작 시간 (00:00:00)
+export function getKoreaTodayStart(): Date {
+  const koreaTime = getKoreaTime();
+  koreaTime.setUTCHours(0, 0, 0, 0);
+  return koreaTime;
+}
+
+// 한국 시간 기준 오늘 시작 시간을 ISO 문자열로 반환
+export function getKoreaTodayStartISO(): string {
+  return getKoreaTodayStart().toISOString();
+}
+
+// 날짜 포맷팅 (한국 시간 기준)
 export function formatDate(date: string | Date, format: 'date' | 'datetime' | 'time' = 'date'): string {
   const d = typeof date === 'string' ? new Date(date) : date;
   
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  const hours = String(d.getHours()).padStart(2, '0');
-  const minutes = String(d.getMinutes()).padStart(2, '0');
+  // UTC 시간을 한국 시간으로 변환 (표시용)
+  const koreaTime = new Date(d.getTime() + (9 * 60 * 60 * 1000));
+  
+  const year = koreaTime.getUTCFullYear();
+  const month = String(koreaTime.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(koreaTime.getUTCDate()).padStart(2, '0');
+  const hours = String(koreaTime.getUTCHours()).padStart(2, '0');
+  const minutes = String(koreaTime.getUTCMinutes()).padStart(2, '0');
   
   switch (format) {
     case 'datetime':
