@@ -801,15 +801,20 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
                 )}
               </div>
               
-              <Button
-                onClick={totalAmount > 0 ? handleComplete : handleStopScan}
-                variant={totalAmount > 0 ? "primary" : "outline"}
-                className={totalAmount > 0 ? "bg-green-600 hover:bg-green-700 text-white border-green-600" : ""}
-                fullWidth
-                size="lg"
-              >
-                {totalAmount > 0 ? '✅ 사용 완료' : '스캔 중지'}
-              </Button>
+              {/* 사용 완료 버튼 - 금액이 있을 때만 표시 */}
+              {totalAmount > 0 && (
+                <Button
+                  onClick={handleComplete}
+                  variant="primary"
+                  className="bg-green-600 hover:bg-green-700 text-white border-green-600"
+                  fullWidth
+                  size="lg"
+                >
+                  ✅ 사용 완료
+                </Button>
+              )}
+              
+              {/* 스캔 중일 때는 버튼 없음 (QR 코드를 계속 스캔할 수 있도록) */}
 
             </div>
           )}
