@@ -209,26 +209,34 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       if (response.ok && data.success === true) {
         addDebugLog('Success response branch', {code,currentError:error,beforeSetError:true,hasErrorTimeout:!!errorTimeoutRef.current});
         
-        // 성공 시 즉시 에러 메시지와 타임아웃 제거 (가장 먼저 처리, 여러 번 확인)
+        // 성공 시 즉시 에러 메시지와 타임아웃 제거 (가장 먼저 처리)
+        // 에러 타임아웃을 먼저 제거 (중요!)
         if (errorTimeoutRef.current) {
           clearTimeout(errorTimeoutRef.current);
           errorTimeoutRef.current = null;
+          addDebugLog('Cleared error timeout on success', {code});
         }
-        // 에러 메시지가 있으면 제거
+        // 에러 메시지가 있으면 즉시 제거
         if (error) {
           addDebugLog('Clearing error on success', {code,previousError:error});
           setError('');
         }
-        // 추가 확인: 즉시 다시 한 번 확인
+        // 추가 확인: 에러 타임아웃이 다시 설정되지 않도록 보장
         setTimeout(() => {
+          // 클로저 문제를 피하기 위해 ref를 직접 확인
           if (errorTimeoutRef.current) {
+            addDebugLog('Error timeout still exists after success (clearing)', {code});
             clearTimeout(errorTimeoutRef.current);
             errorTimeoutRef.current = null;
           }
-          if (error) {
-            addDebugLog('Clearing error on success (delayed check)', {code,previousError:error});
-            setError('');
-          }
+          // 에러 메시지도 직접 제거 (상태 참조 없이)
+          setError((currentError) => {
+            if (currentError) {
+              addDebugLog('Clearing error on success (delayed check)', {code,previousError:currentError});
+              return '';
+            }
+            return currentError;
+          });
         }, 0);
         
         // 성공 시 스캔된 쿠폰에 추가 (중복 방지)
@@ -276,12 +284,20 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
 
       addDebugLog('After success check, before amount update', {code,currentError:error,hasErrorTimeout:!!errorTimeoutRef.current});
       
-      // 성공 시 에러 메시지와 타임아웃 확실히 제거 (즉시)
+      // 성공 시 에러 메시지와 타임아웃 확실히 제거 (즉시, 다시 한 번 확인)
       if (errorTimeoutRef.current) {
+        addDebugLog('Clearing error timeout before amount update', {code});
         clearTimeout(errorTimeoutRef.current);
         errorTimeoutRef.current = null;
       }
-      setError(''); // 성공 시 에러 메시지 즉시 제거
+      // 에러 메시지가 있으면 제거 (함수형 업데이트 사용하여 클로저 문제 방지)
+      setError((currentError) => {
+        if (currentError) {
+          addDebugLog('Clearing error before amount update', {code,previousError:currentError});
+          return '';
+        }
+        return currentError;
+      });
 
       // 누적 금액 업데이트 (카메라 유지)
       // API의 total_amount는 단일 쿠폰 금액이므로 500원 사용
@@ -314,9 +330,18 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         setCameraPaused(false);
         // 에러 타임아웃이 설정되어 있으면 제거 (에러 메시지는 설정하지 않음)
         if (errorTimeoutRef.current) {
+          addDebugLog('Clearing error timeout after flash', {code});
           clearTimeout(errorTimeoutRef.current);
           errorTimeoutRef.current = null;
         }
+        // 에러 메시지도 확인하여 제거 (함수형 업데이트 사용하여 클로저 문제 방지)
+        setError((currentError) => {
+          if (currentError) {
+            addDebugLog('Clearing error after flash', {code,previousError:currentError});
+            return '';
+          }
+          return currentError;
+        });
       }, 500);
       
       setIsProcessing(false);
