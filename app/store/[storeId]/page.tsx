@@ -667,11 +667,28 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
 
     const startScanning = async () => {
       try {
+        // DOM 엘리먼트가 존재하는지 확인
+        const qrReaderElement = document.getElementById('qr-reader');
+        if (!qrReaderElement) {
+          console.error('qr-reader element not found in DOM');
+          setError('QR 스캐너를 초기화할 수 없습니다. 페이지를 새로고침해주세요.');
+          setScanning(false);
+          return;
+        }
+
         scanner = new Html5Qrcode('qr-reader');
         qrCodeRef.current = scanner;
 
         // 후면 카메라 찾기
-        const devices = await Html5Qrcode.getCameras();
+        let devices;
+        try {
+          devices = await Html5Qrcode.getCameras();
+        } catch (cameraError) {
+          console.error('Get cameras error:', cameraError);
+          setError('카메라에 접근할 수 없습니다. 카메라 권한을 확인해주세요.');
+          setScanning(false);
+          return;
+        }
         let cameraId: string | null = null;
         
         for (const device of devices) {
