@@ -757,8 +757,12 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
 
                 // 자동으로 적립 처리 시작
                 // processingCouponsRef는 handleCouponValidationById 내부에서 관리됨
-                // ref를 통해 최신 함수 참조
-                const validationFn = handleCouponValidationByIdRef.current || handleCouponValidationById;
+                // ref를 통해 최신 함수 참조 (null 체크 추가)
+                const validationFn = handleCouponValidationByIdRef.current;
+                if (!validationFn) {
+                  console.error('handleCouponValidationById is not available');
+                  return;
+                }
                 validationFn(couponId)
                   .then((success) => {
                     // 적립 성공 시에만 마지막 스캔 시간 업데이트 (1초 차이 보장)
