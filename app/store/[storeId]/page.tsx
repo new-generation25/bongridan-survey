@@ -149,9 +149,15 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         return false;
       }
 
-      if (!response.ok) {
-        // 이미 사용된 쿠폰인 경우
-        const errorMessage = data.message || '쿠폰 사용에 실패했습니다.';
+      // 성공 응답 확인 (response.ok와 data.success 모두 확인)
+      if (response.ok && data.success === true) {
+        // 성공 시 스캔된 쿠폰에 추가 (중복 방지)
+        scannedCouponsRef.current.add(code);
+      } else {
+        // 실패 응답 처리
+        const errorMessage = data?.message || '쿠폰 사용에 실패했습니다.';
+        
+        // 이미 사용된 쿠폰인 경우 - 스캔된 쿠폰 목록에 추가하여 중복 방지
         if (errorMessage.includes('이미 사용') || errorMessage.includes('사용된') || errorMessage.includes('이미 적립')) {
           scannedCouponsRef.current.add(code);
           setError('이미 적립된 쿠폰입니다.');
@@ -184,8 +190,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         return false;
       }
 
-      // 성공 시 스캔된 쿠폰에 추가
-      scannedCouponsRef.current.add(code);
+      // 성공 처리 계속 진행
 
       // 성공 시 에러 메시지와 타임아웃 확실히 제거 (즉시, 여러 번 확인)
       if (errorTimeoutRef.current) {
@@ -392,9 +397,15 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         return false;
       }
 
-      if (!response.ok) {
-        // 이미 사용된 쿠폰인 경우
-        const errorMessage = data.message || '쿠폰 사용에 실패했습니다.';
+      // 성공 응답 확인 (response.ok와 data.success 모두 확인)
+      if (response.ok && data.success === true) {
+        // 성공 시 스캔된 쿠폰에 추가 (중복 방지)
+        scannedCouponsRef.current.add(couponId);
+      } else {
+        // 실패 응답 처리
+        const errorMessage = data?.message || '쿠폰 사용에 실패했습니다.';
+        
+        // 이미 사용된 쿠폰인 경우 - 스캔된 쿠폰 목록에 추가하여 중복 방지
         if (errorMessage.includes('이미 사용') || errorMessage.includes('사용된') || errorMessage.includes('이미 적립')) {
           scannedCouponsRef.current.add(couponId);
           setError('이미 적립된 쿠폰입니다.');
@@ -427,8 +438,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         return false;
       }
 
-      // 성공 시 스캔된 쿠폰에 추가
-      scannedCouponsRef.current.add(couponId);
+      // 성공 처리 계속 진행
 
       // 성공 시 에러 메시지와 타임아웃 확실히 제거 (즉시, 여러 번 확인)
       if (errorTimeoutRef.current) {

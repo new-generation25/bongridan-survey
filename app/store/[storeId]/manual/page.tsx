@@ -44,8 +44,9 @@ export default function ManualInputPage({ params }: { params: Promise<{ storeId:
 
       const data = await response.json();
 
-      if (!response.ok) {
-        setError(data.message || '쿠폰 사용에 실패했습니다.');
+      // 성공 응답 확인 (response.ok와 data.success 모두 확인)
+      if (!response.ok || data.success !== true) {
+        setError(data?.message || '쿠폰 사용에 실패했습니다.');
         setLoading(false);
         return;
       }
