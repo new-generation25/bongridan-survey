@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Loading from '@/components/ui/Loading';
@@ -280,13 +281,25 @@ export default function AdminDashboardPage() {
 
         {/* 추가 메뉴 */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Card className="hover:border-primary cursor-pointer transition-colors">
-            <div className="text-center space-y-3 py-4">
-              <div className="text-4xl">🏪</div>
-              <p className="font-semibold text-textPrimary">가맹점 관리</p>
-              <p className="text-sm text-textSecondary">준비 중</p>
-            </div>
-          </Card>
+          <Link href="/admin/stores">
+            <Card className="hover:border-primary cursor-pointer transition-colors">
+              <div className="text-center space-y-3 py-4">
+                <div className="text-4xl">🏪</div>
+                <p className="font-semibold text-textPrimary">가맹점 관리</p>
+                <p className="text-sm text-textSecondary">가맹점 정보 및 통계 관리</p>
+              </div>
+            </Card>
+          </Link>
+
+          <Link href="/admin/settlements">
+            <Card className="hover:border-primary cursor-pointer transition-colors">
+              <div className="text-center space-y-3 py-4">
+                <div className="text-4xl">💰</div>
+                <p className="font-semibold text-textPrimary">정산 관리</p>
+                <p className="text-sm text-textSecondary">정산 현황 및 이력 관리</p>
+              </div>
+            </Card>
+          </Link>
 
           <Card className="hover:border-primary cursor-pointer transition-colors">
             <div className="text-center space-y-3 py-4">

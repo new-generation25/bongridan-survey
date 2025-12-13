@@ -8,14 +8,8 @@ import Button from '@/components/ui/Button';
 import Loading from '@/components/ui/Loading';
 import { storage } from '@/lib/utils';
 
-interface Store {
-  id: string;
-  name: string;
-}
-
 export default function AdminQRPage() {
   const router = useRouter();
-  const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [baseUrl, setBaseUrl] = useState('');
@@ -31,25 +25,7 @@ export default function AdminQRPage() {
     // 현재 도메인 URL 가져오기
     const url = window.location.origin;
     setBaseUrl(url);
-
-    // 가맹점 목록 가져오기
-    const fetchStores = async () => {
-      try {
-        const response = await fetch('/api/stores');
-        const data = await response.json();
-
-        if (data.success && data.stores) {
-          setStores(data.stores);
-        }
-      } catch (error) {
-        console.error('Fetch stores error:', error);
-        alert('가맹점 목록을 불러오는데 실패했습니다.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchStores();
+    setLoading(false);
   }, [router]);
 
   // QR코드 이미지 다운로드 함수
@@ -84,66 +60,6 @@ export default function AdminQRPage() {
     }
   };
 
-  // 가맹점별 QR코드 다운로드
-  const handleDownloadStoreQR = async (storeId: string, storeName: string) => {
-    setGenerating(true);
-    try {
-      const storeUrl = `${baseUrl}/store/${storeId}`;
-      const qrDataUrl = await QRCode.toDataURL(storeUrl, {
-        width: 512,
-        margin: 2,
-        color: {
-          dark: '#000000',
-          light: '#FFFFFF',
-        },
-      });
-      // 파일명에서 특수문자 제거
-      const safeName = storeName.replace(/[^a-zA-Z0-9가-힣]/g, '_');
-      downloadQRCode(qrDataUrl, `가맹점_${safeName}_QR코드.png`);
-    } catch (error) {
-      console.error('Generate QR error:', error);
-      alert('QR코드 생성에 실패했습니다.');
-    } finally {
-      setGenerating(false);
-    }
-  };
-
-  // 모든 가맹점 QR코드 일괄 다운로드
-  const handleDownloadAllStoreQR = async () => {
-    if (stores.length === 0) {
-      alert('가맹점 목록이 없습니다.');
-      return;
-    }
-
-    setGenerating(true);
-    try {
-      for (let i = 0; i < stores.length; i++) {
-        const store = stores[i];
-        const storeUrl = `${baseUrl}/store/${store.id}`;
-        const qrDataUrl = await QRCode.toDataURL(storeUrl, {
-          width: 512,
-          margin: 2,
-          color: {
-            dark: '#000000',
-            light: '#FFFFFF',
-          },
-        });
-        const safeName = store.name.replace(/[^a-zA-Z0-9가-힣]/g, '_');
-        downloadQRCode(qrDataUrl, `가맹점_${safeName}_QR코드.png`);
-        
-        // 다운로드 간격을 두어 브라우저가 처리할 수 있도록
-        if (i < stores.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 500));
-        }
-      }
-      alert(`총 ${stores.length}개의 가맹점 QR코드를 다운로드했습니다.`);
-    } catch (error) {
-      console.error('Generate QR error:', error);
-      alert('QR코드 생성에 실패했습니다.');
-    } finally {
-      setGenerating(false);
-    }
-  };
 
   const handleLogout = () => {
     storage.remove('admin_token');
@@ -196,57 +112,22 @@ export default function AdminQRPage() {
           </div>
         </Card>
 
-        {/* 가맹점별 스캔 QR코드 */}
+        {/* 안내 */}
         <Card>
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <div>
-                <h2 className="text-xl font-semibold text-textPrimary mb-2">
-                  🏪 가맹점별 스캔 QR코드
-                </h2>
-                <p className="text-sm text-textSecondary">
-                  각 가맹점에서 쿠폰을 스캔할 때 사용하는 전용 QR코드입니다.
-                </p>
-                <p className="text-xs text-textSecondary mt-1">
-                  총 {stores.length}개 가맹점
-                </p>
-              </div>
-              <Button
-                onClick={handleDownloadAllStoreQR}
-                disabled={generating || stores.length === 0}
-                variant="outline"
-              >
-                {generating ? '생성 중...' : '전체 다운로드'}
-              </Button>
-            </div>
-
-            {/* 가맹점 목록 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
-              {stores.map((store) => (
-                <div
-                  key={store.id}
-                  className="border border-border rounded-lg p-4 space-y-3"
-                >
-                  <div>
-                    <h3 className="font-semibold text-textPrimary">
-                      {store.name}
-                    </h3>
-                    <p className="text-xs text-textSecondary mt-1">
-                      {baseUrl}/store/{store.id}
-                    </p>
-                  </div>
-                  <Button
-                    onClick={() => handleDownloadStoreQR(store.id, store.name)}
-                    disabled={generating}
-                    variant="outline"
-                    size="sm"
-                    fullWidth
-                  >
-                    QR코드 다운로드
-                  </Button>
-                </div>
-              ))}
-            </div>
+          <div className="space-y-2">
+            <h3 className="font-semibold text-textPrimary">
+              💡 가맹점별 QR코드 다운로드
+            </h3>
+            <p className="text-sm text-textSecondary">
+              각 가맹점의 QR코드는 <strong>가맹점 관리</strong> 페이지에서 다운로드할 수 있습니다.
+            </p>
+            <Button
+              onClick={() => router.push('/admin/stores')}
+              variant="outline"
+              className="mt-3"
+            >
+              가맹점 관리로 이동
+            </Button>
           </div>
         </Card>
 
