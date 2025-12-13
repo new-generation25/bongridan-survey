@@ -24,6 +24,8 @@ interface Winner {
   phone: string;
   survey_region: string;
   created_at: string;
+  rank: number;
+  amount: number;
 }
 
 export default function AdminRafflePage() {
@@ -34,7 +36,6 @@ export default function AdminRafflePage() {
   const [winners, setWinners] = useState<Winner[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [eligibleCount, setEligibleCount] = useState(0);
-  const [prizeCount, setPrizeCount] = useState(3);
 
   useEffect(() => {
     const token = storage.get<string>('admin_token');
@@ -88,7 +89,17 @@ export default function AdminRafflePage() {
       return;
     }
 
-    if (!confirm(`정말로 추첨을 진행하시겠습니까?\n\n선정 인원: ${prizeCount}명\n총 응모자: ${totalCount}명`)) {
+    if (totalCount < 7) {
+      alert(`추첨 응모자가 부족합니다. (현재: ${totalCount}명, 필요: 7명 이상)`);
+      return;
+    }
+
+    if (!confirm(`정말로 추첨을 진행하시겠습니까?\n\n` +
+      `1등 (2만원): 1명\n` +
+      `2등 (1만원): 2명\n` +
+      `3등 (5천원): 4명\n` +
+      `총 7명 선정, 총 6만원\n\n` +
+      `총 응모자: ${totalCount}명`)) {
       return;
     }
 
@@ -102,7 +113,7 @@ export default function AdminRafflePage() {
           'Authorization': `Bearer ${token}`,
           'x-admin-token': token || '',
         },
-        body: JSON.stringify({ count: prizeCount }),
+        body: JSON.stringify({}),
       });
 
       const result = await response.json();
@@ -171,47 +182,50 @@ export default function AdminRafflePage() {
               <p className="text-3xl font-bold text-textPrimary">
                 {totalCount}명
               </p>
+              <p className="text-xs text-textSecondary">
+                {totalCount >= 7 ? '✅ 추첨 가능' : '⚠️ 7명 이상 필요'}
+              </p>
             </div>
           </Card>
           <Card>
             <div className="space-y-2">
-              <p className="text-sm text-textSecondary">선정 인원</p>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  value={prizeCount}
-                  onChange={(e) => {
-                    const value = parseInt(e.target.value, 10);
-                    if (!isNaN(value) && value > 0) {
-                      setPrizeCount(value);
-                    }
-                  }}
-                  className="w-20 px-3 py-2 border border-border rounded-lg text-2xl font-bold"
-                  min="1"
-                />
-                <span className="text-textSecondary">명</span>
-              </div>
+              <p className="text-sm text-textSecondary">상금 총액</p>
+              <p className="text-3xl font-bold text-primary">
+                60,000원
+              </p>
+              <p className="text-xs text-textSecondary">
+                1등(2만원) 1명, 2등(1만원) 2명, 3등(5천원) 4명
+              </p>
             </div>
           </Card>
         </div>
 
         {/* 추첨 실행 */}
-        {eligibleCount >= 5 && (
+        {eligibleCount >= 5 && totalCount >= 7 && (
           <Card>
             <div className="space-y-4">
               <h2 className="text-xl font-semibold text-textPrimary">
                 추첨 실행
               </h2>
+              <div className="bg-primary bg-opacity-10 rounded-lg p-4 space-y-2">
+                <p className="font-semibold text-textPrimary">상금 구조</p>
+                <ul className="text-sm text-textSecondary space-y-1">
+                  <li>🥇 1등: 20,000원 (1명)</li>
+                  <li>🥈 2등: 10,000원 (2명)</li>
+                  <li>🥉 3등: 5,000원 (4명)</li>
+                  <li className="font-semibold text-textPrimary pt-2">총 7명 선정, 총 60,000원</li>
+                </ul>
+              </div>
               <p className="text-sm text-textSecondary">
-                종료 시점에서 랜덤으로 당첨자를 선정합니다.
+                종료 시점에서 랜덤으로 당첨자를 선정합니다. 관리자가 개별 연락을 진행합니다.
               </p>
               <Button
                 onClick={handleDraw}
-                disabled={drawing || eligibleCount < 5}
+                disabled={drawing || eligibleCount < 5 || totalCount < 7}
                 size="lg"
                 fullWidth
               >
-                {drawing ? '추첨 중...' : `🎲 추첨 실행 (${prizeCount}명 선정)`}
+                {drawing ? '추첨 중...' : '🎲 추첨 실행 (7명 선정)'}
               </Button>
             </div>
           </Card>
@@ -221,35 +235,63 @@ export default function AdminRafflePage() {
         {winners.length > 0 && (
           <Card>
             <div className="space-y-4">
-              <h2 className="text-xl font-semibold text-textPrimary">
-                🎉 당첨자 결과
-              </h2>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left p-3 text-sm font-semibold text-textPrimary">순위</th>
-                      <th className="text-left p-3 text-sm font-semibold text-textPrimary">이름</th>
-                      <th className="text-left p-3 text-sm font-semibold text-textPrimary">전화번호</th>
-                      <th className="text-left p-3 text-sm font-semibold text-textPrimary">지역</th>
-                      <th className="text-left p-3 text-sm font-semibold text-textPrimary">응모일시</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {winners.map((winner, index) => (
-                      <tr key={winner.id} className="border-b border-border">
-                        <td className="p-3 font-bold text-primary">{index + 1}등</td>
-                        <td className="p-3 font-semibold text-textPrimary">{winner.name}</td>
-                        <td className="p-3 text-textPrimary">{winner.phone}</td>
-                        <td className="p-3 text-textSecondary">{winner.survey_region}</td>
-                        <td className="p-3 text-textSecondary">
-                          {formatDate(winner.created_at, 'datetime')}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-textPrimary">
+                  🎉 당첨자 결과
+                </h2>
+                <p className="text-sm text-textSecondary">
+                  총 {winners.length}명 선정
+                </p>
               </div>
+              
+              {/* 등급별로 그룹화하여 표시 */}
+              {[1, 2, 3].map((rank) => {
+                const rankWinners = winners.filter((w) => w.rank === rank);
+                if (rankWinners.length === 0) return null;
+
+                const prizeInfo = rank === 1 ? { amount: 20000, label: '1등' } :
+                                 rank === 2 ? { amount: 10000, label: '2등' } :
+                                 { amount: 5000, label: '3등' };
+
+                return (
+                  <div key={rank} className="space-y-2">
+                    <h3 className="font-semibold text-textPrimary">
+                      {rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉'} {prizeInfo.label} ({prizeInfo.amount.toLocaleString()}원) - {rankWinners.length}명
+                    </h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-border bg-gray-50">
+                            <th className="text-left p-3 text-sm font-semibold text-textPrimary">이름</th>
+                            <th className="text-left p-3 text-sm font-semibold text-textPrimary">전화번호</th>
+                            <th className="text-left p-3 text-sm font-semibold text-textPrimary">지역</th>
+                            <th className="text-left p-3 text-sm font-semibold text-textPrimary">응모일시</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {rankWinners.map((winner) => (
+                            <tr key={winner.id} className="border-b border-border">
+                              <td className="p-3 font-semibold text-textPrimary">{winner.name}</td>
+                              <td className="p-3">
+                                <a
+                                  href={`tel:${winner.phone}`}
+                                  className="text-primary font-semibold hover:underline text-lg"
+                                >
+                                  {winner.phone}
+                                </a>
+                              </td>
+                              <td className="p-3 text-textSecondary">{winner.survey_region}</td>
+                              <td className="p-3 text-textSecondary">
+                                {formatDate(winner.created_at, 'datetime')}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </Card>
         )}
@@ -293,7 +335,14 @@ export default function AdminRafflePage() {
                     {entries.map((entry) => (
                       <tr key={entry.id} className="border-b border-border">
                         <td className="p-3 font-semibold text-textPrimary">{entry.name}</td>
-                        <td className="p-3 text-textPrimary">{entry.phone}</td>
+                        <td className="p-3">
+                          <a
+                            href={`tel:${entry.phone}`}
+                            className="text-primary font-semibold hover:underline"
+                          >
+                            {entry.phone}
+                          </a>
+                        </td>
                         <td className="p-3 text-textSecondary">{entry.survey_region || '-'}</td>
                         <td className="p-3 text-textSecondary">
                           {formatDate(entry.created_at, 'datetime')}

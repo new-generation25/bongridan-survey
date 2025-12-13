@@ -91,7 +91,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { count = 3 } = await request.json();
+    // 등급별 상금 설정: 1등(2만원) 1명, 2등(1만원) 2명, 3등(5천원) 4명
+    const prizeStructure = [
+      { rank: 1, amount: 20000, count: 1 },
+      { rank: 2, amount: 10000, count: 2 },
+      { rank: 3, amount: 5000, count: 4 },
+    ];
+    const totalWinners = 7; // 총 7명
 
     // 2단계 설문 완료자만 조회
     const { data: completedSurveys, error: surveysError } = await supabaseAdmin
@@ -139,6 +145,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (entries.length < totalWinners) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `추첨 응모자가 부족합니다. (현재: ${entries.length}명, 필요: ${totalWinners}명 이상)`,
+        },
+        { status: 400 }
+      );
+    }
+
     // 랜덤 추첨 (Fisher-Yates 셔플 알고리즘)
     const shuffled = [...entries];
     for (let i = shuffled.length - 1; i > 0; i--) {
@@ -146,32 +162,49 @@ export async function POST(request: NextRequest) {
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
 
-    // 선정 인원만큼 선택
-    const selectedCount = Math.min(count, shuffled.length);
-    
-    // 설문 정보 조회
-    const entrySurveyIds = shuffled.slice(0, selectedCount).map((e) => e.survey_id);
-    const { data: surveys } = await supabaseAdmin
-      .from('surveys')
-      .select('id, q1_region, created_at')
-      .in('id', entrySurveyIds);
+    // 등급별로 선정
+    let currentIndex = 0;
+    const winners: Array<{
+      id: string;
+      name: string;
+      phone: string;
+      survey_region: string;
+      created_at: string;
+      rank: number;
+      amount: number;
+    }> = [];
 
-    const winners = shuffled.slice(0, selectedCount).map((entry) => {
-      const survey = surveys?.find((s) => s.id === entry.survey_id);
-      return {
-        id: entry.id,
-        name: entry.name,
-        phone: entry.phone,
-        survey_region: survey?.q1_region || '-',
-        created_at: entry.created_at,
-      };
-    });
+    for (const prize of prizeStructure) {
+      const selected = shuffled.slice(currentIndex, currentIndex + prize.count);
+      currentIndex += prize.count;
+
+      // 설문 정보 조회
+      const selectedSurveyIds = selected.map((e) => e.survey_id);
+      const { data: surveys } = await supabaseAdmin
+        .from('surveys')
+        .select('id, q1_region, created_at')
+        .in('id', selectedSurveyIds);
+
+      selected.forEach((entry) => {
+        const survey = surveys?.find((s) => s.id === entry.survey_id);
+        winners.push({
+          id: entry.id,
+          name: entry.name,
+          phone: entry.phone,
+          survey_region: survey?.q1_region || '-',
+          created_at: entry.created_at,
+          rank: prize.rank,
+          amount: prize.amount,
+        });
+      });
+    }
 
     return NextResponse.json({
       success: true,
       winners,
       total_entries: entries.length,
-      selected_count: selectedCount,
+      selected_count: winners.length,
+      total_amount: 60000, // 총 6만원
     });
   } catch (error) {
     console.error('Raffle draw error:', error);
