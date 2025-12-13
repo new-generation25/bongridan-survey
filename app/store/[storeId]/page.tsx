@@ -90,9 +90,12 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
     console.log(`[DEBUG] ${message}:`, data);
   }, []);
 
-  // 에러 상태 변화 추적 (프로덕션 환경에서도 작동)
+  // 에러 상태 변화 추적 (프로덕션 환경에서도 작동) - error만 추적하여 중복 방지
+  const prevErrorRef = useRef<string>('');
   useEffect(() => {
-    if (error) {
+    // error가 실제로 변경되었을 때만 로그 추가 (중복 방지)
+    if (error && error !== prevErrorRef.current) {
+      prevErrorRef.current = error;
       const logData = {
         errorMessage: error,
         hasErrorTimeout: !!errorTimeoutRef.current,
@@ -111,11 +114,14 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         fetch('http://127.0.0.1:7242/ingest/aeb5e0c2-08cc-4290-a930-f974f5271152',{
           method:'POST',
           headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({location:'page.tsx:80',message:'Error state changed',data:logData,timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'D'})
+          body:JSON.stringify({location:'page.tsx:94',message:'Error state changed',data:logData,timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'D'})
         }).catch(()=>{});
       }
+    } else if (!error && prevErrorRef.current) {
+      // 에러가 제거되었을 때
+      prevErrorRef.current = '';
     }
-  }, [error, totalAmount, scanCount, isProcessing, addDebugLog]);
+  }, [error, addDebugLog]); // totalAmount, scanCount, isProcessing 제거하여 중복 방지
 
   const handleCouponValidation = useCallback(async (code: string) => {
     addDebugLog('handleCouponValidation entry', {
@@ -201,13 +207,29 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       
       // 성공 응답 확인 (response.ok와 data.success 모두 확인)
       if (response.ok && data.success === true) {
-        addDebugLog('Success response branch', {code,currentError:error,beforeSetError:true});
-        // 성공 시 즉시 에러 메시지 제거 (가장 먼저 처리)
+        addDebugLog('Success response branch', {code,currentError:error,beforeSetError:true,hasErrorTimeout:!!errorTimeoutRef.current});
+        
+        // 성공 시 즉시 에러 메시지와 타임아웃 제거 (가장 먼저 처리, 여러 번 확인)
         if (errorTimeoutRef.current) {
           clearTimeout(errorTimeoutRef.current);
           errorTimeoutRef.current = null;
         }
-        setError(''); // 성공 시 에러 메시지 즉시 제거
+        // 에러 메시지가 있으면 제거
+        if (error) {
+          addDebugLog('Clearing error on success', {code,previousError:error});
+          setError('');
+        }
+        // 추가 확인: 즉시 다시 한 번 확인
+        setTimeout(() => {
+          if (errorTimeoutRef.current) {
+            clearTimeout(errorTimeoutRef.current);
+            errorTimeoutRef.current = null;
+          }
+          if (error) {
+            addDebugLog('Clearing error on success (delayed check)', {code,previousError:error});
+            setError('');
+          }
+        }, 0);
         
         // 성공 시 스캔된 쿠폰에 추가 (중복 방지)
         scannedCouponsRef.current.add(code);
