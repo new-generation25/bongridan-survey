@@ -231,17 +231,16 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       setFlashAmount(addedAmount);
       setShowSuccessFlash(true);
       
-      // 0.5초 후 카메라 재개 및 에러 메시지 재확인
+      // 0.5초 후 카메라 재개
       setTimeout(() => {
         setShowSuccessFlash(false);
         setFlashAmount(0);
         setCameraPaused(false);
-        // 플래시 효과 종료 후에도 에러 메시지가 없는지 확인
+        // 에러 타임아웃이 설정되어 있으면 제거 (에러 메시지는 설정하지 않음)
         if (errorTimeoutRef.current) {
           clearTimeout(errorTimeoutRef.current);
           errorTimeoutRef.current = null;
         }
-        setError(''); // 플래시 효과 종료 후에도 에러 메시지 제거
       }, 500);
       
       setIsProcessing(false);
@@ -495,17 +494,16 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       setFlashAmount(addedAmount);
       setShowSuccessFlash(true);
       
-      // 0.5초 후 카메라 재개 및 에러 메시지 재확인
+      // 0.5초 후 카메라 재개
       setTimeout(() => {
         setShowSuccessFlash(false);
         setFlashAmount(0);
         setCameraPaused(false);
-        // 플래시 효과 종료 후에도 에러 메시지가 없는지 확인
+        // 에러 타임아웃이 설정되어 있으면 제거 (에러 메시지는 설정하지 않음)
         if (errorTimeoutRef.current) {
           clearTimeout(errorTimeoutRef.current);
           errorTimeoutRef.current = null;
         }
-        setError(''); // 플래시 효과 종료 후에도 에러 메시지 제거
       }, 500);
       
       setIsProcessing(false);
