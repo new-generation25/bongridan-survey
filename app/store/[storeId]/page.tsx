@@ -807,7 +807,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         clearTimeout(errorTimeoutRef.current);
       }
     };
-  }, [scanning, storeId, storeName, addDebugLog]);
+  }, [scanning, storeId, storeName, addDebugLog, handleCouponValidationById]);
 
   const handleStartScan = () => {
     setError('');
