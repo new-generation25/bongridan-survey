@@ -53,9 +53,8 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
   const scannedCouponsRef = useRef<Set<string>>(new Set());
   const processingCouponsRef = useRef<Set<string>>(new Set()); // 처리 중인 쿠폰 ID 추적
   const qrCodeRef = useRef<Html5Qrcode | null>(null);
-  const videoStreamRef = useRef<MediaStream | null>(null); // 비디오 스트림 참조
-  const videoElementRef = useRef<HTMLVideoElement | null>(null); // 비디오 엘리먼트 참조
   const errorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastScanTimeRef = useRef<number>(0); // 마지막 QR 코드 인식 시간 (밀리초)
 
   // 통계 조회 함수
   const fetchStoreStats = useCallback(async (storeIdValue: string) => {
@@ -643,13 +642,18 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
     }
   }, [storeId]);
 
-  // 카메라 스트림 시작 (자동 스캔 없이 비디오만 표시)
+  // 카메라 스트림 시작 (자동 스캔, 1초에 1번씩만 인식)
   useEffect(() => {
     if (!scanning || !storeId || !storeName) return;
 
-    const startCamera = async () => {
+    let scanner: Html5Qrcode | null = null;
+
+    const startScanning = async () => {
       try {
-        // 카메라 장치 찾기
+        scanner = new Html5Qrcode('qr-reader');
+        qrCodeRef.current = scanner;
+
+        // 후면 카메라 찾기
         const devices = await Html5Qrcode.getCameras();
         let cameraId: string | null = null;
         
@@ -671,146 +675,126 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
           throw new Error('사용 가능한 카메라를 찾을 수 없습니다.');
         }
 
-        // getUserMedia로 비디오 스트림 시작 (자동 스캔 없음)
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            deviceId: { exact: cameraId },
-            facingMode: 'environment',
-          }
-        });
+        // 카메라 시작 (fps: 1로 설정하여 초당 1프레임으로 제한)
+        await scanner.start(
+          cameraId,
+          {
+            fps: 1, // 초당 1프레임으로 제한
+            qrbox: { width: 250, height: 250 },
+            aspectRatio: 1.0,
+            videoConstraints: {
+              facingMode: 'environment', // 후면 카메라
+            },
+          },
+          async (decodedText) => {
+            try {
+              const now = Date.now();
+              const timeSinceLastScan = now - lastScanTimeRef.current;
 
-        videoStreamRef.current = stream;
-        
-        // 비디오 엘리먼트에 스트림 연결
-        const videoElement = document.getElementById('qr-reader-video') as HTMLVideoElement;
-        if (videoElement) {
-          videoElement.srcObject = stream;
-          videoElement.play();
-          videoElementRef.current = videoElement;
-          addDebugLog('Camera stream started (manual mode)', {cameraId});
-        }
+              // 마지막 인식 후 1초가 지나지 않았으면 무시
+              if (timeSinceLastScan < 1000) {
+                addDebugLog('QR scan ignored (too soon)', {
+                  decodedText: decodedText.substring(0, 20) + '...',
+                  timeSinceLastScan,
+                  lastScanTime: lastScanTimeRef.current,
+                  now
+                });
+                return;
+              }
+
+              // 마지막 인식 시간 업데이트
+              lastScanTimeRef.current = now;
+              addDebugLog('QR code scanned', {decodedText, timeSinceLastScan});
+
+              // URL 형식인지 확인
+              let couponId: string | null = null;
+              if (decodedText.includes('/api/coupon/validate?id=')) {
+                try {
+                  if (decodedText.startsWith('http://') || decodedText.startsWith('https://')) {
+                    const url = new URL(decodedText);
+                    couponId = url.searchParams.get('id');
+                  } else {
+                    const url = new URL(decodedText, window.location.origin);
+                    couponId = url.searchParams.get('id');
+                  }
+                  addDebugLog('QR code parsed (URL)', {decodedText, couponId});
+                } catch (e) {
+                  addDebugLog('URL parse failed', {decodedText, error: e});
+                  setError('QR 코드 형식이 올바르지 않습니다.');
+                  if (errorTimeoutRef.current) {
+                    clearTimeout(errorTimeoutRef.current);
+                  }
+                  errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
+                  return;
+                }
+              } else {
+                addDebugLog('Numeric code detected (not supported)', {decodedText});
+                setError('숫자 코드는 수동 입력을 사용해주세요.');
+                if (errorTimeoutRef.current) {
+                  clearTimeout(errorTimeoutRef.current);
+                }
+                errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
+                return;
+              }
+
+              if (couponId) {
+                // 이미 촬영 목록에 있는지 확인
+                if (pendingCoupons.some(c => c.couponId === couponId)) {
+                  addDebugLog('QR code already in pending list', {couponId});
+                  return; // 에러 메시지 표시하지 않고 무시
+                }
+
+                // 촬영 목록에 추가
+                setPendingCoupons(prev => [...prev, { couponId, timestamp: now }]);
+                addDebugLog('QR code added to pending list', { couponId, pendingCount: pendingCoupons.length + 1 });
+              } else {
+                addDebugLog('Invalid QR code (no couponId)', {decodedText});
+                setError('유효하지 않은 QR 코드입니다.');
+                if (errorTimeoutRef.current) {
+                  clearTimeout(errorTimeoutRef.current);
+                }
+                errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
+              }
+            } catch (error) {
+              console.error('QR scan callback error:', error);
+              addDebugLog('QR scan callback error', {error: error instanceof Error ? error.message : String(error), decodedText});
+              setError('QR 코드 처리 중 오류가 발생했습니다.');
+              if (errorTimeoutRef.current) {
+                clearTimeout(errorTimeoutRef.current);
+              }
+              errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
+            }
+          },
+          (error) => {
+            // 스캔 실패 (무시 - 계속 스캔 시도)
+            // console.log('Scan error:', error);
+          }
+        );
       } catch (error) {
-        console.error('Camera initialization error:', error);
+        console.error('Scanner initialization error:', error);
         setError('QR 스캐너를 시작할 수 없습니다. 카메라 권한을 확인해주세요.');
         setScanning(false);
       }
     };
 
-    startCamera();
+    startScanning();
 
     return () => {
-      // 정리
-      if (videoStreamRef.current) {
-        videoStreamRef.current.getTracks().forEach(track => track.stop());
-        videoStreamRef.current = null;
-      }
-      if (videoElementRef.current) {
-        videoElementRef.current.srcObject = null;
-        videoElementRef.current = null;
+      if (scanner) {
+        scanner.stop().catch(console.error);
+        scanner.clear();
       }
       if (errorTimeoutRef.current) {
         clearTimeout(errorTimeoutRef.current);
       }
     };
-  }, [scanning, storeId, storeName, addDebugLog]);
+  }, [scanning, storeId, storeName, addDebugLog, pendingCoupons]);
 
   const handleStartScan = () => {
     setError('');
+    lastScanTimeRef.current = 0; // 마지막 인식 시간 초기화
     setScanning(true);
   };
-
-  // 촬영 버튼 핸들러: 현재 비디오 프레임을 캡처하여 QR 코드 스캔
-  const handleCapture = useCallback(async () => {
-    if (!videoElementRef.current || !qrCodeRef.current) {
-      setError('카메라가 준비되지 않았습니다.');
-      if (errorTimeoutRef.current) {
-        clearTimeout(errorTimeoutRef.current);
-      }
-      errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
-      return;
-    }
-
-    try {
-      setIsProcessing(true);
-      setError('');
-
-      // 비디오 프레임을 File 객체로 캡처
-      const capturedFile = await captureFrameAsFile(videoElementRef.current);
-      addDebugLog('Frame captured', {fileName: capturedFile.name, fileSize: capturedFile.size});
-
-      // Html5Qrcode 초기화 (아직 초기화되지 않은 경우)
-      if (!qrCodeRef.current) {
-        qrCodeRef.current = new Html5Qrcode('qr-reader');
-      }
-
-      // scanFile로 QR 코드 읽기
-      const decodedText = await qrCodeRef.current.scanFile(capturedFile, false);
-      addDebugLog('QR code scanned from file', {decodedText});
-
-      // URL 형식인지 확인
-      let couponId: string | null = null;
-      if (decodedText.includes('/api/coupon/validate?id=')) {
-        try {
-          if (decodedText.startsWith('http://') || decodedText.startsWith('https://')) {
-            const url = new URL(decodedText);
-            couponId = url.searchParams.get('id');
-          } else {
-            const url = new URL(decodedText, window.location.origin);
-            couponId = url.searchParams.get('id');
-          }
-        } catch (e) {
-          setError('QR 코드 형식이 올바르지 않습니다.');
-          if (errorTimeoutRef.current) {
-            clearTimeout(errorTimeoutRef.current);
-          }
-          errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
-          setIsProcessing(false);
-          return;
-        }
-      } else {
-        setError('숫자 코드는 수동 입력을 사용해주세요.');
-        if (errorTimeoutRef.current) {
-          clearTimeout(errorTimeoutRef.current);
-        }
-        errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
-        setIsProcessing(false);
-        return;
-      }
-
-      if (couponId) {
-        // 이미 촬영 목록에 있는지 확인
-        if (pendingCoupons.some(c => c.couponId === couponId)) {
-          setError('이미 촬영된 쿠폰입니다.');
-          if (errorTimeoutRef.current) {
-            clearTimeout(errorTimeoutRef.current);
-          }
-          errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
-          setIsProcessing(false);
-          return;
-        }
-
-        // 촬영 목록에 추가
-        setPendingCoupons(prev => [...prev, { couponId, timestamp: Date.now() }]);
-        addDebugLog('QR code captured', { couponId, pendingCount: pendingCoupons.length + 1 });
-      } else {
-        setError('유효하지 않은 QR 코드입니다.');
-        if (errorTimeoutRef.current) {
-          clearTimeout(errorTimeoutRef.current);
-        }
-        errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
-      }
-
-      setIsProcessing(false);
-    } catch (error) {
-      console.error('Capture error:', error);
-      setError('QR 코드를 읽을 수 없습니다. 다시 시도해주세요.');
-      if (errorTimeoutRef.current) {
-        clearTimeout(errorTimeoutRef.current);
-      }
-      errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
-      setIsProcessing(false);
-    }
-  }, [pendingCoupons, addDebugLog]);
 
   // 적립 버튼 핸들러: 촬영한 모든 QR 코드를 일괄 처리
   const handleApplyCoupons = useCallback(async () => {
@@ -891,13 +875,18 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       }
       
       // 카메라 중지 (에러가 발생해도 계속 진행)
-      if (videoStreamRef.current) {
-        videoStreamRef.current.getTracks().forEach(track => track.stop());
-        videoStreamRef.current = null;
-      }
-      if (videoElementRef.current) {
-        videoElementRef.current.srcObject = null;
-        videoElementRef.current = null;
+      if (qrCodeRef.current) {
+        try {
+          await qrCodeRef.current.stop();
+        } catch (stopError) {
+          console.error('Stop scanner error:', stopError);
+        }
+        try {
+          qrCodeRef.current.clear();
+        } catch (clearError) {
+          console.error('Clear scanner error:', clearError);
+        }
+        qrCodeRef.current = null;
       }
       
       // 상태 리셋
@@ -1038,15 +1027,8 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
                 </div>
               )}
 
-              {/* 비디오 스트림 (자동 스캔 없음) */}
-              <div className="w-full relative bg-black rounded-lg overflow-hidden">
-                <video
-                  id="qr-reader-video"
-                  autoPlay
-                  playsInline
-                  className="w-full h-auto"
-                  style={{ transform: 'scaleX(-1)' }} // 미러링
-                />
+              {/* QR reader (자동 스캔, 1초에 1번씩만 인식) */}
+              <div id="qr-reader" className="w-full relative">
                 {/* 카메라 일시 정지 시 검정 화면 */}
                 {cameraPaused && (
                   <div className="absolute inset-0 bg-black z-20 rounded-lg flex items-center justify-center">
@@ -1057,18 +1039,6 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
                   </div>
                 )}
               </div>
-
-              {/* 촬영 버튼 - 카메라 바로 아래 */}
-              <Button
-                onClick={handleCapture}
-                variant="primary"
-                className="bg-yellow-500 hover:bg-yellow-600 text-white"
-                fullWidth
-                size="lg"
-                disabled={isProcessing}
-              >
-                📷 촬영하기
-              </Button>
 
               {/* 촬영한 쿠폰 목록 표시 */}
               {pendingCoupons.length > 0 && (
