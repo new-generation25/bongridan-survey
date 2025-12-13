@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import QRCode from 'qrcode';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Loading from '@/components/ui/Loading';
@@ -30,6 +31,8 @@ export default function AdminStoresPage() {
     manager_name: '',
     manager_phone: '',
   });
+  const [generatingQR, setGeneratingQR] = useState<string | null>(null);
+  const [baseUrl, setBaseUrl] = useState('');
 
   useEffect(() => {
     const token = storage.get<string>('admin_token');
@@ -37,6 +40,9 @@ export default function AdminStoresPage() {
       router.push('/admin');
       return;
     }
+
+    const url = window.location.origin;
+    setBaseUrl(url);
 
     fetchStores();
   }, [router]);
@@ -116,6 +122,36 @@ export default function AdminStoresPage() {
     }
   };
 
+  const handleDownloadQR = async (storeId: string, storeName: string) => {
+    if (!baseUrl) return;
+
+    setGeneratingQR(storeId);
+    try {
+      const storeUrl = `${baseUrl}/store/${storeId}`;
+      const qrDataUrl = await QRCode.toDataURL(storeUrl, {
+        width: 512,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF',
+        },
+      });
+
+      const link = document.createElement('a');
+      link.href = qrDataUrl;
+      const safeName = storeName.replace(/[^a-zA-Z0-9가-힣]/g, '_');
+      link.download = `가맹점_${safeName}_QR코드.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Generate QR error:', error);
+      alert('QR코드 생성에 실패했습니다.');
+    } finally {
+      setGeneratingQR(null);
+    }
+  };
+
   const handleLogout = () => {
     storage.remove('admin_token');
     router.push('/admin');
@@ -161,6 +197,7 @@ export default function AdminStoresPage() {
                   <th className="text-right p-3 text-sm font-semibold text-textPrimary">정산</th>
                   <th className="text-right p-3 text-sm font-semibold text-textPrimary">미정산</th>
                   <th className="text-center p-3 text-sm font-semibold text-textPrimary">상태</th>
+                  <th className="text-center p-3 text-sm font-semibold text-textPrimary">QR코드</th>
                   <th className="text-center p-3 text-sm font-semibold text-textPrimary">관리</th>
                 </tr>
               </thead>
@@ -205,6 +242,16 @@ export default function AdminStoresPage() {
                       >
                         {store.is_active ? '활성' : '비활성'}
                       </span>
+                    </td>
+                    <td className="p-3 text-center">
+                      <Button
+                        onClick={() => handleDownloadQR(store.id, store.name)}
+                        disabled={generatingQR === store.id || !baseUrl}
+                        variant="outline"
+                        size="sm"
+                      >
+                        {generatingQR === store.id ? '생성 중...' : 'QR 다운로드'}
+                      </Button>
                     </td>
                     <td className="p-3 text-center">
                       <Link href={`/admin/stores/${store.id}`}>
