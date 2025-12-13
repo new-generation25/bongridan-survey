@@ -30,11 +30,20 @@ export function getKoreaTime(): Date {
   return koreaTime;
 }
 
-// 한국 시간 기준 오늘 시작 시간 (00:00:00)
+// 한국 시간 기준 오늘 시작 시간 (00:00:00) - UTC로 반환
 export function getKoreaTodayStart(): Date {
-  const koreaTime = getKoreaTime();
-  koreaTime.setUTCHours(0, 0, 0, 0);
-  return koreaTime;
+  const now = new Date();
+  // 한국 시간대의 현재 시간 계산
+  const koreaTime = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+  
+  // 한국 시간 기준 오늘 00:00:00
+  const koreaTodayStart = new Date(koreaTime);
+  koreaTodayStart.setUTCHours(0, 0, 0, 0);
+  
+  // 한국 시간 00:00:00을 UTC로 변환 (9시간 빼기)
+  const utcTodayStart = new Date(koreaTodayStart.getTime() - (9 * 60 * 60 * 1000));
+  
+  return utcTodayStart;
 }
 
 // 한국 시간 기준 오늘 시작 시간을 ISO 문자열로 반환
