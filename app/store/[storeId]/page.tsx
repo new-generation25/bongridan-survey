@@ -834,36 +834,24 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         }
       }
       
-      // 카메라 중지
-      if (qrCodeRef.current) {
-        try {
-          await qrCodeRef.current.stop();
-        } catch (stopError) {
-          console.error('Stop scanner error:', stopError);
-        }
-        try {
-          qrCodeRef.current.clear();
-        } catch (clearError) {
-          console.error('Clear scanner error:', clearError);
-        }
-        qrCodeRef.current = null;
-      }
+      // 먼저 스캔 상태를 false로 설정하여 useEffect cleanup이 실행되도록 함
+      setScanning(false);
       
       // 상태 리셋
       setTotalAmount(0);
       setScanCount(0);
       scannedCouponsRef.current.clear();
       processingCouponsRef.current.clear();
-      setScanning(false);
       setCameraPaused(false);
       setShowSuccessFlash(false);
       setFlashAmount(0);
       setError('');
+      lastScanTimeRef.current = 0; // 마지막 인식 시간 초기화
       
-      // 카메라 재시작 (다음 고객을 위해)
+      // 카메라 재시작 (다음 고객을 위해) - 약간의 딜레이를 두어 cleanup이 완료되도록 함
       setTimeout(() => {
         setScanning(true);
-      }, 100);
+      }, 300);
     } catch (error) {
       console.error('Use coupons error:', error);
       setError('처리 중 오류가 발생했습니다.');
