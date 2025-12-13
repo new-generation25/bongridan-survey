@@ -15,11 +15,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 가맹점 목록 조회
+    // 가맹점 목록 조회 (가맹점 번호 순으로 정렬)
     const { data: stores, error: storesError } = await supabaseAdmin
       .from('stores')
       .select('*')
-      .order('name');
+      .order('id');
 
     if (storesError) {
       console.error('Get stores error:', storesError);
