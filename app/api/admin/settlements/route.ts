@@ -63,6 +63,7 @@ export async function GET(request: NextRequest) {
         return {
           store_id: store.id,
           store_name: store.name,
+          used_count: usedCount || 0,
           total_amount: totalAmount,
           settled_amount: settledAmount,
           unsettled_amount: unsettledAmount,

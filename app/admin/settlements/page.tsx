@@ -25,6 +25,7 @@ interface Settlement {
 interface StoreUnsettled {
   store_id: string;
   store_name: string;
+  used_count: number;
   total_amount: number;
   settled_amount: number;
   unsettled_amount: number;
@@ -239,9 +240,10 @@ export default function AdminSettlementsPage() {
                 <thead>
                   <tr className="border-b border-border">
                     <th className="text-left p-3 text-sm font-semibold text-textPrimary">가맹점명</th>
+                    <th className="text-right p-3 text-sm font-semibold text-textPrimary">적립건수</th>
                     <th className="text-right p-3 text-sm font-semibold text-textPrimary">총 사용</th>
-                    <th className="text-right p-3 text-sm font-semibold text-textPrimary">정산</th>
                     <th className="text-right p-3 text-sm font-semibold text-textPrimary">미정산</th>
+                    <th className="text-right p-3 text-sm font-semibold text-textPrimary">정산</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -249,13 +251,16 @@ export default function AdminSettlementsPage() {
                     <tr key={store.store_id} className="border-b border-border">
                       <td className="p-3 font-semibold text-textPrimary">{store.store_name}</td>
                       <td className="p-3 text-right text-textPrimary">
-                        {formatCurrency(store.total_amount)}
+                        {formatNumber(store.used_count)}건
                       </td>
-                      <td className="p-3 text-right text-success">
-                        {formatCurrency(store.settled_amount)}
+                      <td className="p-3 text-right text-textPrimary">
+                        {formatCurrency(store.total_amount)}
                       </td>
                       <td className="p-3 text-right text-warning font-semibold">
                         {formatCurrency(store.unsettled_amount)}
+                      </td>
+                      <td className="p-3 text-right text-success">
+                        {formatCurrency(store.settled_amount)}
                       </td>
                     </tr>
                   ))}
