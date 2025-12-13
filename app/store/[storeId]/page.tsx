@@ -56,6 +56,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
   const qrCodeRef = useRef<Html5Qrcode | null>(null);
   const errorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastScanTimeRef = useRef<number>(0); // 마지막 QR 코드 인식 시간 (밀리초)
+  const handleCouponValidationByIdRef = useRef<((couponId: string) => Promise<boolean>) | null>(null);
 
   // 통계 조회 함수
   const fetchStoreStats = useCallback(async (storeIdValue: string) => {
@@ -751,7 +752,9 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
 
                 // 자동으로 적립 처리 시작
                 // processingCouponsRef는 handleCouponValidationById 내부에서 관리됨
-                handleCouponValidationById(couponId)
+                // ref를 통해 최신 함수 참조
+                const validationFn = handleCouponValidationByIdRef.current || handleCouponValidationById;
+                validationFn(couponId)
                   .then((success) => {
                     // 적립 성공 시에만 마지막 스캔 시간 업데이트 (1초 차이 보장)
                     if (success) {
@@ -807,7 +810,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         clearTimeout(errorTimeoutRef.current);
       }
     };
-  }, [scanning, storeId, storeName, addDebugLog, handleCouponValidationById]);
+  }, [scanning, storeId, storeName, addDebugLog]);
 
   const handleStartScan = () => {
     setError('');
