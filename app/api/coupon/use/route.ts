@@ -37,7 +37,10 @@ export async function POST(request: NextRequest) {
           .eq('code', code)
           .maybeSingle();
         
+        console.log('[DEBUG API] Coupon status check:', {code,couponErrorCode:couponError?.code,existingCouponStatus:existingCoupon?.status});
+        
         if (existingCoupon?.status === 'used') {
+          console.log('[DEBUG API] Returning already used error:', {code});
           return NextResponse.json(
             { success: false, message: '이미 사용된 쿠폰입니다' },
             { status: 400 }
@@ -73,6 +76,8 @@ export async function POST(request: NextRequest) {
       .eq('used_store_id', store_id)
       .eq('status', 'used');
 
+    console.log('[DEBUG API] Returning success response:', {code,success:true});
+    
     return NextResponse.json({
       success: true,
       total_amount: coupon.amount,

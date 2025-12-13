@@ -78,9 +78,55 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
     fetchStore();
   }, [params, router, fetchStoreStats]);
 
+  // 에러 상태 변화 추적 (프로덕션 환경에서도 작동)
+  useEffect(() => {
+    if (error) {
+      const logData = {
+        location: 'page.tsx:80',
+        message: 'Error state changed',
+        data: {
+          errorMessage: error,
+          hasErrorTimeout: !!errorTimeoutRef.current,
+          scannedSetSize: scannedCouponsRef.current.size,
+          scannedCodes: Array.from(scannedCouponsRef.current),
+          totalAmount,
+          scanCount,
+          isProcessing,
+          timestamp: new Date().toISOString()
+        },
+        sessionId: 'debug-session',
+        runId: 'run2',
+        hypothesisId: 'D'
+      };
+      
+      // 브라우저 콘솔에 상세 로그 출력 (프로덕션에서도 작동)
+      console.log('[DEBUG] Error set:', logData);
+      
+      // 로컬 개발 환경에서만 HTTP 로깅 시도
+      if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+        fetch('http://127.0.0.1:7242/ingest/aeb5e0c2-08cc-4290-a930-f974f5271152',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({...logData, timestamp:Date.now()})
+        }).catch(()=>{});
+      }
+    }
+  }, [error, totalAmount, scanCount, isProcessing]);
+
   const handleCouponValidation = useCallback(async (code: string) => {
+    const logEntry = (msg: string, data: Record<string, unknown>) => {
+      const logData = {location:'page.tsx:81',message:msg,data:{...data,code,timestamp:new Date().toISOString()},sessionId:'debug-session',runId:'run2'};
+      console.log(`[DEBUG] ${msg}:`, logData);
+      if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+        fetch('http://127.0.0.1:7242/ingest/aeb5e0c2-08cc-4290-a930-f974f5271152',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...logData,timestamp:Date.now()})}).catch(()=>{});
+      }
+    };
+    
+    logEntry('handleCouponValidation entry', {hasCode:scannedCouponsRef.current.has(code),scannedSetSize:scannedCouponsRef.current.size,scannedCodes:Array.from(scannedCouponsRef.current)});
+    
     // 중복 스캔 체크
     if (scannedCouponsRef.current.has(code)) {
+      console.log('[DEBUG] Duplicate scan detected:', {code,scannedCodes:Array.from(scannedCouponsRef.current)});
       setError('이미 적립된 쿠폰입니다.');
       // 에러 메시지 자동 제거 (3초 후)
       if (errorTimeoutRef.current) {
@@ -150,8 +196,11 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         return false;
       }
 
+      console.log('[DEBUG] API response received:', {responseOk:response.ok,responseStatus:response.status,dataSuccess:data?.success,dataMessage:data?.message,code});
+      
       // 성공 응답 확인 (response.ok와 data.success 모두 확인)
       if (response.ok && data.success === true) {
+        console.log('[DEBUG] Success response branch:', {code,currentError:error,beforeSetError:true});
         // 성공 시 즉시 에러 메시지 제거 (가장 먼저 처리)
         if (errorTimeoutRef.current) {
           clearTimeout(errorTimeoutRef.current);
@@ -162,11 +211,13 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         // 성공 시 스캔된 쿠폰에 추가 (중복 방지)
         scannedCouponsRef.current.add(code);
       } else {
+        console.log('[DEBUG] Error response branch:', {responseOk:response.ok,responseStatus:response.status,dataSuccess:data?.success,errorMessage:data?.message,code});
         // 실패 응답 처리
         const errorMessage = data?.message || '쿠폰 사용에 실패했습니다.';
         
         // 이미 사용된 쿠폰인 경우 - 스캔된 쿠폰 목록에 추가하여 중복 방지
         if (errorMessage.includes('이미 사용') || errorMessage.includes('사용된') || errorMessage.includes('이미 적립')) {
+          console.log('[DEBUG] Already used coupon error:', {code,errorMessage});
           scannedCouponsRef.current.add(code);
           setError('이미 적립된 쿠폰입니다.');
           // 에러 메시지 자동 제거 (3초 후)
@@ -200,6 +251,8 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
 
       // 성공 처리 계속 진행
 
+      console.log('[DEBUG] After success check, before amount update:', {code,currentError:error,hasErrorTimeout:!!errorTimeoutRef.current});
+      
       // 성공 시 에러 메시지와 타임아웃 확실히 제거 (즉시)
       if (errorTimeoutRef.current) {
         clearTimeout(errorTimeoutRef.current);
