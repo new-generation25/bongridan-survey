@@ -66,10 +66,6 @@ export default function RafflePage() {
     }
   };
 
-  const handleSkip = () => {
-    router.push('/complete');
-  };
-
   if (loading) {
     return <Loading fullScreen text="추첨 응모 중입니다..." />;
   }
@@ -138,15 +134,6 @@ export default function RafflePage() {
             <div className="space-y-3">
               <Button type="submit" fullWidth size="lg">
                 추첨 응모하기
-              </Button>
-              
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={handleSkip}
-                fullWidth
-              >
-                건너뛰기
               </Button>
             </div>
           </form>

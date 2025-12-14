@@ -165,59 +165,39 @@ export default function CouponPage({ params }: { params: Promise<{ id: string }>
                     🎁 경품 추첨 안내
                   </p>
                   <p className="text-textSecondary text-sm">
-                    응모하시면 2만원 상품권을 드립니다!
+                    응모하시면 추첨하여 2만원 이용권을 드립니다!
                   </p>
                 </div>
 
-                <div className="space-y-3">
-                  <Button
-                    onClick={() => router.push('/raffle')}
-                    fullWidth
-                    size="lg"
-                  >
-                    응모하기
-                  </Button>
-
-                  <Button
-                    onClick={() => router.push('/complete')}
-                    variant="outline"
-                    fullWidth
-                  >
-                    다음에 할게요
-                  </Button>
-                </div>
+                <Button
+                  onClick={() => router.push('/raffle')}
+                  fullWidth
+                  size="lg"
+                >
+                  응모하기
+                </Button>
               </div>
             )}
 
             {/* 2단계 미완료 + 경품 미응모 시: 추가 설문 안내 */}
             {!isStep2Completed && !isRaffleEntered && (
-              <div className="bg-warning bg-opacity-10 rounded-xl p-6 space-y-4">
+              <div className="bg-primary bg-opacity-10 rounded-xl p-6 space-y-4">
                 <div className="text-center">
-                  <p className="text-xl font-bold text-warning mb-2">
-                    🎁 추가 설문하면 1만원 추첨!
+                  <p className="text-xl font-bold text-primary mb-2">
+                    🎁 경품 추첨 안내
                   </p>
                   <p className="text-textSecondary text-sm">
-                    추가 설문에 응답하시면 더 좋은 보상을 추첨하여 제공합니다
+                    추가 설문에 응답하시면 추첨하여 2만원 이용권을 드립니다
                   </p>
                 </div>
 
-                <div className="space-y-3">
-                  <Button
-                    onClick={() => router.push('/survey/step2')}
-                    fullWidth
-                    size="lg"
-                  >
-                    추가 설문하고 응모하기
-                  </Button>
-
-                  <Button
-                    onClick={() => router.push('/complete')}
-                    variant="outline"
-                    fullWidth
-                  >
-                    다음에 할게요
-                  </Button>
-                </div>
+                <Button
+                  onClick={() => router.push('/survey/step2')}
+                  fullWidth
+                  size="lg"
+                >
+                  추가 설문하고 응모하기
+                </Button>
               </div>
             )}
 

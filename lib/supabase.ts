@@ -25,20 +25,19 @@ export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
 
 // Supabase 헬퍼 함수들
 export const supabaseHelpers = {
-  // 설문 중복 확인 (서버 사이드용, 한국 시간 기준)
+  // 설문 중복 확인 (서버 사이드용, 한국 시간 기준, 3일 이내)
   async checkDuplicateSurvey(deviceId: string): Promise<boolean> {
     try {
-      // 한국 시간 기준 오늘 시작 시간
+      // 한국 시간 기준 3일 전 시간
       const koreaTime = new Date();
-      const koreaToday = new Date(koreaTime.getTime() + (9 * 60 * 60 * 1000));
-      koreaToday.setUTCHours(0, 0, 0, 0);
+      const threeDaysAgo = new Date(koreaTime.getTime() + (9 * 60 * 60 * 1000) - (3 * 24 * 60 * 60 * 1000));
 
       // 인덱스를 활용한 최적화된 쿼리
       const { data, error } = await supabaseAdmin
         .from('surveys')
         .select('id', { count: 'exact', head: false })
         .eq('device_id', deviceId)
-        .gte('created_at', koreaToday.toISOString())
+        .gte('created_at', threeDaysAgo.toISOString())
         .limit(1)
         .maybeSingle();
 
@@ -51,6 +50,28 @@ export const supabaseHelpers = {
       return !!data;
     } catch (error) {
       console.error('Check duplicate exception:', error);
+      return false;
+    }
+  },
+
+  // 경품 응모 중복 확인 (전화번호 기준)
+  async checkDuplicateRaffleEntry(phone: string): Promise<boolean> {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('raffle_entries')
+        .select('id')
+        .eq('phone', phone)
+        .limit(1)
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Check duplicate raffle error:', error);
+        return false;
+      }
+
+      return !!data;
+    } catch (error) {
+      console.error('Check duplicate raffle exception:', error);
       return false;
     }
   },
