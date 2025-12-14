@@ -1124,13 +1124,6 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
                 </div>
               )}
 
-              {/* 에러 메시지 - 카메라 바로 위에 표시 */}
-              {error && (
-                <div className="bg-red-50 border-2 border-red-400 rounded-lg p-4 text-center">
-                  <p className="text-red-700 font-semibold text-lg">⚠️ {error}</p>
-                </div>
-              )}
-
               {/* QR reader (자동 스캔, 1초에 1번씩만 인식) */}
               <div id="qr-reader" className="w-full relative">
                 {/* 카메라 일시 정지 시 검정 화면 */}
