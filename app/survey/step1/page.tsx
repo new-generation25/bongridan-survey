@@ -8,13 +8,19 @@ import RadioGroup from '@/components/ui/RadioGroup';
 import CheckboxGroup from '@/components/ui/CheckboxGroup';
 import Loading from '@/components/ui/Loading';
 import { getDeviceId, storage } from '@/lib/utils';
-import { REGIONS, GIMHAE_DONGS, AGE_GROUPS, VISIT_PURPOSES, VISIT_CHANNELS, BUDGETS, COMPANIONS } from '@/lib/constants';
+import {
+  REGIONS, GIMHAE_DONGS, AGE_GROUPS, VISIT_PURPOSES, VISIT_CHANNELS, BUDGETS, COMPANIONS,
+  FREQUENCIES, DURATIONS, SATISFACTIONS, IMPROVEMENTS, OTHER_SPOTS
+} from '@/lib/constants';
 
 export default function SurveyStep1Page() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [startTime] = useState(Date.now());
-  const [formData, setFormData] = useState({
+  const [showStep2, setShowStep2] = useState(false);
+
+  // Step1 데이터
+  const [step1Data, setStep1Data] = useState({
     q1_region: '',
     q1_1_dong: '',
     q2_age: '',
@@ -24,38 +30,80 @@ export default function SurveyStep1Page() {
     q6_companion: '',
   });
 
-  const showDongSelect = formData.q1_region === '김해시';
+  // Step2 데이터
+  const [step2Data, setStep2Data] = useState({
+    q7_frequency: '',
+    q8_duration: '',
+    q9_satisfaction: '',
+    q10_improvement: [] as string[],
+    q11_other_spots: [] as string[],
+  });
 
-  // 진행률 계산 (각 문항 10%씩, 최대 60% - 1단계 6문항)
-  const calculateProgress = () => {
+  const showDongSelect = step1Data.q1_region === '김해시';
+
+  // Step1 진행률 계산 (각 문항 10%씩)
+  const calculateStep1Progress = () => {
     let progress = 0;
-    if (formData.q1_region) progress += 10;
-    if (showDongSelect && formData.q1_1_dong) progress += 10; // 김해시 선택 시 추가
-    if (formData.q2_age) progress += 10;
-    if (formData.q3_purpose.length > 0) progress += 10;
-    if (formData.q4_channel) progress += 10;
-    if (formData.q5_budget) progress += 10;
-    if (formData.q6_companion) progress += 10;
+    if (step1Data.q1_region) progress += 10;
+    if (showDongSelect && step1Data.q1_1_dong) progress += 10;
+    if (step1Data.q2_age) progress += 10;
+    if (step1Data.q3_purpose.length > 0) progress += 10;
+    if (step1Data.q4_channel) progress += 10;
+    if (step1Data.q5_budget) progress += 10;
+    if (step1Data.q6_companion) progress += 10;
     return progress;
   };
 
-  const progress = calculateProgress();
+  // Step2 진행률 계산 (각 문항 10%씩)
+  const calculateStep2Progress = () => {
+    let progress = 0;
+    if (step2Data.q7_frequency) progress += 10;
+    if (step2Data.q8_duration) progress += 10;
+    if (step2Data.q9_satisfaction) progress += 10;
+    if (step2Data.q10_improvement.length > 0) progress += 10;
+    if (step2Data.q11_other_spots.length > 0) progress += 10;
+    return progress;
+  };
 
-  // 모든 필수 항목이 입력되었는지 확인
-  const isFormValid = () => {
-    const basicValid = formData.q1_region && formData.q2_age &&
-      formData.q3_purpose.length > 0 && formData.q4_channel &&
-      formData.q5_budget && formData.q6_companion;
+  // 전체 진행률
+  const progress = showStep2
+    ? calculateStep1Progress() + calculateStep2Progress()
+    : calculateStep1Progress();
 
-    if (formData.q1_region === '김해시') {
-      return basicValid && formData.q1_1_dong;
+  // Step1 필수 항목 확인
+  const isStep1Valid = () => {
+    const basicValid = step1Data.q1_region && step1Data.q2_age &&
+      step1Data.q3_purpose.length > 0 && step1Data.q4_channel &&
+      step1Data.q5_budget && step1Data.q6_companion;
+
+    if (step1Data.q1_region === '김해시') {
+      return basicValid && step1Data.q1_1_dong;
     }
     return basicValid;
   };
 
-  // 설문 제출 공통 함수
-  const submitSurvey = async (destination: 'step2' | 'coupon') => {
-    if (!isFormValid()) {
+  // Step2 필수 항목 확인
+  const isStep2Valid = () => {
+    return step2Data.q7_frequency && step2Data.q8_duration && step2Data.q9_satisfaction &&
+      step2Data.q10_improvement.length > 0 && step2Data.q11_other_spots.length > 0;
+  };
+
+  // 추가 설문하기 - Step2 표시
+  const handleShowStep2 = () => {
+    if (!isStep1Valid()) {
+      alert('모든 필수 항목을 입력해주세요.');
+      return;
+    }
+    setShowStep2(true);
+    // 부드럽게 스크롤
+    setTimeout(() => {
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    }, 100);
+  };
+
+  // 설문 완료 (Step1만 제출)
+  const handleCompleteStep1Only = async () => {
+    if (!isStep1Valid()) {
       alert('모든 필수 항목을 입력해주세요.');
       return;
     }
@@ -71,7 +119,7 @@ export default function SurveyStep1Page() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           device_id: deviceId,
-          ...formData,
+          ...step1Data,
           response_time_step1: responseTime,
         }),
       });
@@ -89,12 +137,78 @@ export default function SurveyStep1Page() {
       storage.set('survey_id', data.survey_id);
       storage.set('coupon_id', data.coupon_id);
 
-      // 목적지에 따라 이동
-      if (destination === 'step2') {
-        router.push('/survey/step2');
-      } else {
-        router.push(`/coupon/${data.coupon_id}`);
+      // 쿠폰 페이지로 이동
+      router.push(`/coupon/${data.coupon_id}`);
+    } catch (error) {
+      console.error('Submit error:', error);
+      alert('네트워크 오류가 발생했습니다.');
+      setLoading(false);
+    }
+  };
+
+  // 전체 제출 (Step1 + Step2)
+  const handleSubmitAll = async () => {
+    if (!isStep1Valid()) {
+      alert('1단계 설문의 모든 필수 항목을 입력해주세요.');
+      return;
+    }
+    if (!isStep2Valid()) {
+      alert('2단계 설문의 모든 필수 항목을 입력해주세요.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const deviceId = getDeviceId();
+      const responseTime = Math.floor((Date.now() - startTime) / 1000);
+
+      // Step1 제출
+      const step1Response = await fetch('/api/survey/step1', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          device_id: deviceId,
+          ...step1Data,
+          response_time_step1: responseTime,
+        }),
+      });
+
+      const step1Result = await step1Response.json();
+
+      if (!step1Response.ok) {
+        console.error('Step1 API Error:', { status: step1Response.status, data: step1Result });
+        alert(step1Result.message || '오류가 발생했습니다.');
+        setLoading(false);
+        return;
       }
+
+      // 쿠폰 정보 저장
+      storage.set('survey_id', step1Result.survey_id);
+      storage.set('coupon_id', step1Result.coupon_id);
+
+      // Step2 제출
+      const step2Response = await fetch('/api/survey/step2', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          survey_id: step1Result.survey_id,
+          ...step2Data,
+          response_time_step2: Math.floor((Date.now() - startTime) / 1000) - responseTime,
+        }),
+      });
+
+      const step2Result = await step2Response.json();
+
+      if (!step2Response.ok) {
+        console.error('Step2 API Error:', { status: step2Response.status, data: step2Result });
+        alert(step2Result.message || '오류가 발생했습니다.');
+        setLoading(false);
+        return;
+      }
+
+      // 추첨 페이지로 이동
+      router.push('/raffle');
     } catch (error) {
       console.error('Submit error:', error);
       alert('네트워크 오류가 발생했습니다.');
@@ -113,12 +227,12 @@ export default function SurveyStep1Page() {
         <div className="max-w-2xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between mb-1">
             <span className="text-sm font-medium text-textSecondary">설문 진행률</span>
-            <span className="text-sm font-bold text-primary">{progress}%</span>
+            <span className="text-sm font-bold text-primary">{Math.min(progress, 100)}%</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-3">
             <div
               className="bg-primary h-3 rounded-full transition-all duration-300 ease-out"
-              style={{ width: `${progress}%` }}
+              style={{ width: `${Math.min(progress, 100)}%` }}
             />
           </div>
         </div>
@@ -126,6 +240,7 @@ export default function SurveyStep1Page() {
 
       <div className="py-8 px-4">
         <div className="max-w-2xl mx-auto space-y-6">
+          {/* Step 1 */}
           <Card>
             <h1 className="text-2xl font-bold text-textPrimary mb-2">
               설문조사 1단계
@@ -140,8 +255,8 @@ export default function SurveyStep1Page() {
                   label="Q1. 거주 지역"
                   name="q1_region"
                   options={REGIONS.map(r => ({ label: r, value: r }))}
-                  value={formData.q1_region}
-                  onChange={(value) => setFormData({ ...formData, q1_region: value, q1_1_dong: '' })}
+                  value={step1Data.q1_region}
+                  onChange={(value) => setStep1Data({ ...step1Data, q1_region: value, q1_1_dong: '' })}
                   required
                 />
               </div>
@@ -152,8 +267,8 @@ export default function SurveyStep1Page() {
                     label="Q1-1. 김해시 어느 동에 거주하시나요?"
                     name="q1_1_dong"
                     options={GIMHAE_DONGS.map(d => ({ label: d, value: d }))}
-                    value={formData.q1_1_dong}
-                    onChange={(value) => setFormData({ ...formData, q1_1_dong: value })}
+                    value={step1Data.q1_1_dong}
+                    onChange={(value) => setStep1Data({ ...step1Data, q1_1_dong: value })}
                   />
                 </div>
               )}
@@ -163,8 +278,8 @@ export default function SurveyStep1Page() {
                   label="Q2. 연령대"
                   name="q2_age"
                   options={AGE_GROUPS.map(a => ({ label: a, value: a }))}
-                  value={formData.q2_age}
-                  onChange={(value) => setFormData({ ...formData, q2_age: value })}
+                  value={step1Data.q2_age}
+                  onChange={(value) => setStep1Data({ ...step1Data, q2_age: value })}
                   required
                 />
               </div>
@@ -173,8 +288,8 @@ export default function SurveyStep1Page() {
                 <CheckboxGroup
                   label="Q3. 오늘 봉리단길 방문 목적 (복수선택 가능)"
                   options={VISIT_PURPOSES.map(p => ({ label: p, value: p }))}
-                  values={formData.q3_purpose}
-                  onChange={(values) => setFormData({ ...formData, q3_purpose: values })}
+                  values={step1Data.q3_purpose}
+                  onChange={(values) => setStep1Data({ ...step1Data, q3_purpose: values })}
                   required
                 />
               </div>
@@ -184,8 +299,8 @@ export default function SurveyStep1Page() {
                   label="Q4. 봉리단길을 어떻게 알게 되셨나요?"
                   name="q4_channel"
                   options={VISIT_CHANNELS.map(c => ({ label: c, value: c }))}
-                  value={formData.q4_channel}
-                  onChange={(value) => setFormData({ ...formData, q4_channel: value })}
+                  value={step1Data.q4_channel}
+                  onChange={(value) => setStep1Data({ ...step1Data, q4_channel: value })}
                   required
                 />
               </div>
@@ -195,8 +310,8 @@ export default function SurveyStep1Page() {
                   label="Q5. 오늘 1인 예상 지출 금액"
                   name="q5_budget"
                   options={BUDGETS.map(b => ({ label: b, value: b }))}
-                  value={formData.q5_budget}
-                  onChange={(value) => setFormData({ ...formData, q5_budget: value })}
+                  value={step1Data.q5_budget}
+                  onChange={(value) => setStep1Data({ ...step1Data, q5_budget: value })}
                   required
                 />
               </div>
@@ -206,43 +321,122 @@ export default function SurveyStep1Page() {
                   label="Q6. 누구와 함께 방문하셨나요?"
                   name="q6_companion"
                   options={COMPANIONS.map(c => ({ label: c, value: c }))}
-                  value={formData.q6_companion}
-                  onChange={(value) => setFormData({ ...formData, q6_companion: value })}
+                  value={step1Data.q6_companion}
+                  onChange={(value) => setStep1Data({ ...step1Data, q6_companion: value })}
                   required
                 />
               </div>
 
-              {/* 두 개의 버튼 나란히 */}
-              <div className="space-y-3 pt-4">
-                <div className="flex gap-3">
-                  {/* 추가 설문하기 버튼 (강조) */}
-                  <Button
-                    onClick={() => submitSurvey('step2')}
-                    disabled={!isFormValid()}
-                    size="lg"
-                    className="flex-1"
-                  >
-                    추가 설문하기
-                  </Button>
+              {/* Step1만 표시될 때 버튼 */}
+              {!showStep2 && (
+                <div className="space-y-3 pt-4">
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={handleShowStep2}
+                      disabled={!isStep1Valid()}
+                      size="lg"
+                      className="flex-1"
+                    >
+                      추가 설문하기
+                    </Button>
 
-                  {/* 설문 완료하기 버튼 (덜 강조) */}
-                  <Button
-                    onClick={() => submitSurvey('coupon')}
-                    disabled={!isFormValid()}
-                    variant="outline"
-                    size="lg"
-                    className="flex-1"
-                  >
-                    설문 완료
-                  </Button>
+                    <Button
+                      onClick={handleCompleteStep1Only}
+                      disabled={!isStep1Valid()}
+                      variant="outline"
+                      size="lg"
+                      className="flex-1"
+                    >
+                      설문 완료
+                    </Button>
+                  </div>
+
+                  <p className="text-sm text-center text-textSecondary">
+                    추가 설문 시 추첨을 통해 추가 보상을 제공합니다
+                  </p>
                 </div>
-
-                <p className="text-sm text-center text-textSecondary">
-                  추가 설문 시 추첨을 통해 추가 보상을 제공합니다
-                </p>
-              </div>
+              )}
             </div>
           </Card>
+
+          {/* Step 2 - 추가 설문하기 클릭 시 표시 */}
+          {showStep2 && (
+            <Card>
+              <h1 className="text-2xl font-bold text-textPrimary mb-2">
+                설문조사 2단계
+              </h1>
+              <p className="text-textSecondary mb-6">
+                방문 경험에 대해 알려주세요
+              </p>
+
+              <div className="space-y-6">
+                <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
+                  <RadioGroup
+                    label="Q7. 봉리단길 방문 빈도"
+                    name="q7_frequency"
+                    options={FREQUENCIES.map(f => ({ label: f, value: f }))}
+                    value={step2Data.q7_frequency}
+                    onChange={(value) => setStep2Data({ ...step2Data, q7_frequency: value })}
+                    required
+                  />
+                </div>
+
+                <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
+                  <RadioGroup
+                    label="Q8. 오늘 체류 예상 시간"
+                    name="q8_duration"
+                    options={DURATIONS.map(d => ({ label: d, value: d }))}
+                    value={step2Data.q8_duration}
+                    onChange={(value) => setStep2Data({ ...step2Data, q8_duration: value })}
+                    required
+                  />
+                </div>
+
+                <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
+                  <RadioGroup
+                    label="Q9. 봉리단길 전반적 만족도"
+                    name="q9_satisfaction"
+                    options={SATISFACTIONS.map(s => ({ label: s, value: s }))}
+                    value={step2Data.q9_satisfaction}
+                    onChange={(value) => setStep2Data({ ...step2Data, q9_satisfaction: value })}
+                    required
+                  />
+                </div>
+
+                <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
+                  <CheckboxGroup
+                    label="Q10. 봉리단길에서 아쉬운 점이 있다면? (복수선택 가능)"
+                    options={IMPROVEMENTS.map(i => ({ label: i, value: i }))}
+                    values={step2Data.q10_improvement}
+                    onChange={(values) => setStep2Data({ ...step2Data, q10_improvement: values })}
+                    required
+                  />
+                </div>
+
+                <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
+                  <CheckboxGroup
+                    label="Q11. 봉리단길 외에 방문하고 싶은 김해 관광지는? (복수선택 가능)"
+                    options={OTHER_SPOTS.map(o => ({ label: o, value: o }))}
+                    values={step2Data.q11_other_spots}
+                    onChange={(values) => setStep2Data({ ...step2Data, q11_other_spots: values })}
+                    required
+                  />
+                </div>
+
+                {/* 제출 버튼만 표시 (이전 버튼 삭제) */}
+                <div className="pt-4">
+                  <Button
+                    onClick={handleSubmitAll}
+                    disabled={!isStep1Valid() || !isStep2Valid()}
+                    size="lg"
+                    fullWidth
+                  >
+                    제출하기
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          )}
         </div>
       </div>
     </main>
