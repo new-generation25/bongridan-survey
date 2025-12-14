@@ -156,7 +156,39 @@ export default function CouponPage({ params }: { params: Promise<{ id: string }>
               <p className="mt-3 font-semibold text-textPrimary">📍 봉리단길 가맹점 어디서나 사용</p>
             </div>
 
-            {/* 추가 설문 안내 (2단계 설문 미완료 시에만 표시) */}
+            {/* 2단계 완료 시: 경품 응모 안내 */}
+            {isStep2Completed && (
+              <div className="bg-primary bg-opacity-10 rounded-xl p-6 space-y-4">
+                <div className="text-center">
+                  <p className="text-xl font-bold text-primary mb-2">
+                    🎁 경품 추첨 안내
+                  </p>
+                  <p className="text-textSecondary text-sm">
+                    응모하시면 2만원 상품권을 드립니다!
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <Button
+                    onClick={() => router.push('/raffle')}
+                    fullWidth
+                    size="lg"
+                  >
+                    응모하기
+                  </Button>
+
+                  <Button
+                    onClick={() => router.push('/complete')}
+                    variant="outline"
+                    fullWidth
+                  >
+                    다음에 할게요
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* 2단계 미완료 시: 추가 설문 안내 */}
             {!isStep2Completed && (
               <div className="bg-warning bg-opacity-10 rounded-xl p-6 space-y-4">
                 <div className="text-center">
@@ -167,7 +199,7 @@ export default function CouponPage({ params }: { params: Promise<{ id: string }>
                     추가 설문에 응답하시면 더 좋은 보상을 추첨하여 제공합니다
                   </p>
                 </div>
-                
+
                 <div className="space-y-3">
                   <Button
                     onClick={() => router.push('/survey/step2')}
@@ -176,7 +208,7 @@ export default function CouponPage({ params }: { params: Promise<{ id: string }>
                   >
                     추가 설문하고 응모하기
                   </Button>
-                  
+
                   <Button
                     onClick={() => router.push('/complete')}
                     variant="outline"

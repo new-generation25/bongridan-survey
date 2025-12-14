@@ -207,8 +207,8 @@ export default function SurveyStep1Page() {
         return;
       }
 
-      // 추첨 페이지로 이동
-      router.push('/raffle');
+      // 쿠폰 페이지로 이동 (2단계 완료 후에도 QR코드 먼저 보여줌)
+      router.push(`/coupon/${step1Result.coupon_id}`);
     } catch (error) {
       console.error('Submit error:', error);
       alert('네트워크 오류가 발생했습니다.');
