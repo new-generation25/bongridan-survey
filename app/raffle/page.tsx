@@ -84,11 +84,11 @@ export default function RafflePage() {
               경품 추첨 응모
             </h1>
             <p className="text-textSecondary">
-              추첨을 통해 소정의 상품을 드립니다
+              응모하시면 2만원 상품권을 드립니다!
             </p>
             <div className="bg-primary bg-opacity-10 rounded-lg p-4">
               <p className="text-primary font-semibold">
-                추첨 인원: 3명 (추후 개별 연락)
+                추첨을 통해 개별 연락드립니다
               </p>
             </div>
           </div>
