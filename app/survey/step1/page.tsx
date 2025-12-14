@@ -14,6 +14,9 @@ import { REGIONS, GIMHAE_DONGS, AGE_GROUPS, VISIT_PURPOSES, VISIT_CHANNELS, BUDG
 export default function SurveyStep1Page() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [showChoice, setShowChoice] = useState(false);
+  const [couponId, setCouponId] = useState('');
+  const [surveyId, setSurveyId] = useState('');
   const [startTime] = useState(Date.now());
   const [formData, setFormData] = useState({
     q1_region: '',
@@ -77,8 +80,11 @@ export default function SurveyStep1Page() {
       storage.set('survey_id', data.survey_id);
       storage.set('coupon_id', data.coupon_id);
 
-      // 쿠폰 페이지로 이동
-      router.push(`/coupon/${data.coupon_id}`);
+      // 상태 저장 후 선택 화면 표시
+      setCouponId(data.coupon_id);
+      setSurveyId(data.survey_id);
+      setLoading(false);
+      setShowChoice(true);
     } catch (error) {
       console.error('Submit error:', error);
       alert('네트워크 오류가 발생했습니다.');
@@ -106,6 +112,59 @@ export default function SurveyStep1Page() {
 
   if (loading) {
     return <Loading fullScreen text="설문을 제출하는 중입니다..." />;
+  }
+
+  // 1단계 완료 후 선택 화면
+  if (showChoice) {
+    return (
+      <main className="min-h-screen bg-background py-8 px-4">
+        <div className="max-w-2xl mx-auto space-y-6">
+          <Card>
+            <div className="text-center space-y-6">
+              <div className="text-5xl">🎉</div>
+              <h1 className="text-2xl font-bold text-textPrimary">
+                1단계 설문 완료!
+              </h1>
+              <p className="text-textSecondary">
+                500원 할인 쿠폰이 발급되었습니다.
+              </p>
+
+              <div className="space-y-4 pt-4">
+                {/* 추가 설문하기 버튼 (강조) */}
+                <div>
+                  <Button
+                    onClick={() => router.push('/survey/step2')}
+                    fullWidth
+                    size="lg"
+                    className="bg-primary hover:bg-blue-600"
+                  >
+                    🎁 추가 설문하기
+                  </Button>
+                  <p className="text-sm text-textSecondary mt-2">
+                    몇 개 문항에 더 응답하면 추첨을 통해 추가 보상을 제공합니다.
+                  </p>
+                </div>
+
+                {/* 설문 완료하기 버튼 (덜 강조) */}
+                <div className="pt-2">
+                  <Button
+                    onClick={() => router.push(`/coupon/${couponId}`)}
+                    variant="outline"
+                    fullWidth
+                    size="lg"
+                  >
+                    설문 완료하기
+                  </Button>
+                  <p className="text-sm text-gray-400 mt-2">
+                    바로 쿠폰을 확인합니다.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </main>
+    );
   }
 
   return (
