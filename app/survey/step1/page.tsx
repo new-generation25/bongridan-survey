@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -18,6 +18,7 @@ export default function SurveyStep1Page() {
   const [loading, setLoading] = useState(false);
   const [startTime] = useState(Date.now());
   const [showStep2, setShowStep2] = useState(false);
+  const step2Ref = useRef<HTMLDivElement>(null);
 
   // Step1 데이터
   const [step1Data, setStep1Data] = useState({
@@ -95,9 +96,9 @@ export default function SurveyStep1Page() {
       return;
     }
     setShowStep2(true);
-    // 부드럽게 스크롤
+    // Step2 섹션으로 부드럽게 스크롤
     setTimeout(() => {
-      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+      step2Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 100);
   };
 
@@ -361,6 +362,7 @@ export default function SurveyStep1Page() {
 
           {/* Step 2 - 추가 설문하기 클릭 시 표시 */}
           {showStep2 && (
+            <div ref={step2Ref}>
             <Card>
               <h1 className="text-2xl font-bold text-textPrimary mb-2">
                 설문조사 2단계
@@ -436,6 +438,7 @@ export default function SurveyStep1Page() {
                 </div>
               </div>
             </Card>
+            </div>
           )}
         </div>
       </div>

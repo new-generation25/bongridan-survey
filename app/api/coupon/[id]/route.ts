@@ -23,16 +23,27 @@ export async function GET(
       );
     }
 
-    // 설문 완료 상태 확인
+    // 설문 완료 상태 및 경품 응모 여부 확인
     let surveyStageCompleted = 1;
+    let raffleEntered = false;
+
     if (coupon.survey_id) {
       const { data: survey } = await supabaseAdmin
         .from('surveys')
         .select('stage_completed')
         .eq('id', coupon.survey_id)
         .maybeSingle();
-      
+
       surveyStageCompleted = survey?.stage_completed || 1;
+
+      // 경품 응모 여부 확인
+      const { data: raffleEntry } = await supabaseAdmin
+        .from('raffle_entries')
+        .select('id')
+        .eq('survey_id', coupon.survey_id)
+        .maybeSingle();
+
+      raffleEntered = !!raffleEntry;
     }
 
     return NextResponse.json({
@@ -40,6 +51,7 @@ export async function GET(
       coupon: {
         ...coupon,
         survey_stage_completed: surveyStageCompleted,
+        raffle_entered: raffleEntered,
       },
     });
   } catch (error) {

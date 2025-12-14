@@ -105,14 +105,6 @@ export default function CompletePage() {
               >
                 가맹점 목록 보기
               </Button>
-              
-              <Button
-                onClick={() => router.push('/')}
-                variant="ghost"
-                fullWidth
-              >
-                처음으로
-              </Button>
             </div>
 
             <div className="text-sm text-textSecondary pt-6 border-t border-border">

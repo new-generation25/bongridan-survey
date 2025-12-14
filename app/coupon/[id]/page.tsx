@@ -67,6 +67,7 @@ export default function CouponPage({ params }: { params: Promise<{ id: string }>
   const isExpired = new Date(coupon.expires_at) < koreaNow;
   const isUsed = coupon.status === 'used';
   const isStep2Completed = coupon.survey_stage_completed === 2; // 2단계 설문 완료 여부
+  const isRaffleEntered = (coupon as Coupon & { raffle_entered?: boolean }).raffle_entered === true; // 경품 응모 여부
 
   return (
     <main className="min-h-screen bg-background py-8 px-4">
@@ -156,8 +157,8 @@ export default function CouponPage({ params }: { params: Promise<{ id: string }>
               <p className="mt-3 font-semibold text-textPrimary">📍 봉리단길 가맹점 어디서나 사용</p>
             </div>
 
-            {/* 2단계 완료 시: 경품 응모 안내 */}
-            {isStep2Completed && (
+            {/* 2단계 완료 + 경품 미응모 시: 경품 응모 안내 */}
+            {isStep2Completed && !isRaffleEntered && (
               <div className="bg-primary bg-opacity-10 rounded-xl p-6 space-y-4">
                 <div className="text-center">
                   <p className="text-xl font-bold text-primary mb-2">
@@ -188,8 +189,8 @@ export default function CouponPage({ params }: { params: Promise<{ id: string }>
               </div>
             )}
 
-            {/* 2단계 미완료 시: 추가 설문 안내 */}
-            {!isStep2Completed && (
+            {/* 2단계 미완료 + 경품 미응모 시: 추가 설문 안내 */}
+            {!isStep2Completed && !isRaffleEntered && (
               <div className="bg-warning bg-opacity-10 rounded-xl p-6 space-y-4">
                 <div className="text-center">
                   <p className="text-xl font-bold text-warning mb-2">
