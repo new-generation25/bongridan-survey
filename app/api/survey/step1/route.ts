@@ -29,14 +29,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 중복 응답 확인 (테스트용으로 임시 비활성화)
-    // const isDuplicate = await supabaseHelpers.checkDuplicateSurvey(data.device_id);
-    // if (isDuplicate) {
-    //   return NextResponse.json(
-    //     { success: false, message: ERROR_MESSAGES.DUPLICATE_RESPONSE },
-    //     { status: 409 }
-    //   );
-    // }
+    // 중복 응답 확인 (3일 이내 동일 기기)
+    const isDuplicate = await supabaseHelpers.checkDuplicateSurvey(data.device_id);
+    if (isDuplicate) {
+      return NextResponse.json(
+        { success: false, message: '이전에 참여하였습니다. 이전 응답 후 3일 후에 응답이 가능합니다.' },
+        { status: 409 }
+      );
+    }
 
     // 설문 데이터 삽입
     const insertData: any = {

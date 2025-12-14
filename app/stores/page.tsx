@@ -75,7 +75,7 @@ export default function StoresPage() {
             </div>
           </div>
 
-          <div className="mt-6 space-y-3">
+          <div className="mt-6">
             <Button
               onClick={() => {
                 try {
@@ -94,14 +94,6 @@ export default function StoresPage() {
               fullWidth
             >
               내 쿠폰 보기
-            </Button>
-            
-            <Button
-              onClick={() => router.push('/')}
-              variant="outline"
-              fullWidth
-            >
-              처음으로
             </Button>
           </div>
         </Card>

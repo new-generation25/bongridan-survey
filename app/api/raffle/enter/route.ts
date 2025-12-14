@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
+import { supabaseAdmin, supabaseHelpers } from '@/lib/supabase';
 import { ERROR_MESSAGES } from '@/lib/constants';
 
 export async function POST(request: NextRequest) {
@@ -11,6 +11,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { success: false, message: ERROR_MESSAGES.INVALID_REQUEST },
         { status: 400 }
+      );
+    }
+
+    // 중복 응모 확인 (전화번호 기준)
+    const isDuplicate = await supabaseHelpers.checkDuplicateRaffleEntry(phone);
+    if (isDuplicate) {
+      return NextResponse.json(
+        { success: false, message: '경품 응모는 한번만 참여할 수 있습니다.' },
+        { status: 409 }
       );
     }
 
