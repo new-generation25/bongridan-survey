@@ -1028,8 +1028,8 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
             </div>
           )}
 
-          {/* 디버그 로그 표시 (모바일에서도 확인 가능) */}
-          {debugLogs.length > 0 && (
+          {/* 디버그 로그 표시 (모바일에서도 확인 가능) - 프로덕션에서는 숨김 */}
+          {false && debugLogs.length > 0 && (
             <div className="bg-gray-100 border border-gray-300 rounded-lg p-3 mb-4 max-h-60 overflow-y-auto">
               <div className="flex justify-between items-center mb-2">
                 <p className="text-xs font-semibold text-gray-700">🔍 디버그 로그 (최근 {debugLogs.length}개)</p>
