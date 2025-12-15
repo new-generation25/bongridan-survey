@@ -9,17 +9,18 @@ export interface Survey {
   q1_region: string;
   q1_1_dong?: string;
   q2_age: string;
-  q3_purpose: string[];
-  q4_channel: string;
-  q5_budget: string;
-  q6_companion: string;
-  
+  q3_activity: string[];
+  q4_occasion: string;
+  q5_channel: string;
+  q6_budget: string;
+  q7_companion: string;
+
   // 2단계 추가 문항
-  q7_frequency?: string;
-  q8_duration?: string;
-  q9_satisfaction?: string;
-  q10_improvement?: string[];
-  q11_other_spots?: string[];
+  q8_frequency?: string;
+  q9_duration?: string;
+  q10_satisfaction?: string;
+  q11_improvement?: string[];
+  q12_other_spots?: string[];
   
   // 메타 정보
   stage_completed: number;
@@ -89,20 +90,21 @@ export interface SurveyStep1Data {
   q1_region: string;
   q1_1_dong?: string;
   q2_age: string;
-  q3_purpose: string[];
-  q4_channel: string;
-  q5_budget: string;
-  q6_companion: string;
+  q3_activity: string[];
+  q4_occasion: string;
+  q5_channel: string;
+  q6_budget: string;
+  q7_companion: string;
   response_time_step1: number;
 }
 
 export interface SurveyStep2Data {
   survey_id: string;
-  q7_frequency: string;
-  q8_duration: string;
-  q9_satisfaction: string;
-  q10_improvement: string[];
-  q11_other_spots: string[];
+  q8_frequency: string;
+  q9_duration: string;
+  q10_satisfaction: string;
+  q11_improvement: string[];
+  q12_other_spots: string[];
   response_time_step2: number;
 }
 

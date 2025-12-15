@@ -16,18 +16,18 @@ export default function SurveyStep2Page() {
   const [loading, setLoading] = useState(false);
   const [startTime] = useState(Date.now());
   const [formData, setFormData] = useState({
-    q7_frequency: '',
-    q8_duration: '',
-    q9_satisfaction: '',
-    q10_improvement: [] as string[],
-    q11_other_spots: [] as string[],
+    q8_frequency: '',
+    q9_duration: '',
+    q10_satisfaction: '',
+    q11_improvement: [] as string[],
+    q12_other_spots: [] as string[],
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.q7_frequency || !formData.q8_duration || !formData.q9_satisfaction ||
-        formData.q10_improvement.length === 0 || formData.q11_other_spots.length === 0) {
+
+    if (!formData.q8_frequency || !formData.q9_duration || !formData.q10_satisfaction ||
+        formData.q11_improvement.length === 0 || formData.q12_other_spots.length === 0) {
       alert('모든 필수 항목을 입력해주세요.');
       return;
     }
@@ -92,53 +92,53 @@ export default function SurveyStep2Page() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
               <RadioGroup
-                label="Q7. 봉리단길 방문 빈도"
-                name="q7_frequency"
+                label="Q8. 봉리단길 방문 빈도"
+                name="q8_frequency"
                 options={FREQUENCIES.map(f => ({ label: f, value: f }))}
-                value={formData.q7_frequency}
-                onChange={(value) => setFormData({ ...formData, q7_frequency: value })}
+                value={formData.q8_frequency}
+                onChange={(value) => setFormData({ ...formData, q8_frequency: value })}
                 required
               />
             </div>
 
             <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
               <RadioGroup
-                label="Q8. 오늘 체류 예상 시간"
-                name="q8_duration"
+                label="Q9. 오늘 체류 예상 시간"
+                name="q9_duration"
                 options={DURATIONS.map(d => ({ label: d, value: d }))}
-                value={formData.q8_duration}
-                onChange={(value) => setFormData({ ...formData, q8_duration: value })}
+                value={formData.q9_duration}
+                onChange={(value) => setFormData({ ...formData, q9_duration: value })}
                 required
               />
             </div>
 
             <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
               <RadioGroup
-                label="Q9. 봉리단길 전반적 만족도"
-                name="q9_satisfaction"
+                label="Q10. 봉리단길 전반적 만족도"
+                name="q10_satisfaction"
                 options={SATISFACTIONS.map(s => ({ label: s, value: s }))}
-                value={formData.q9_satisfaction}
-                onChange={(value) => setFormData({ ...formData, q9_satisfaction: value })}
+                value={formData.q10_satisfaction}
+                onChange={(value) => setFormData({ ...formData, q10_satisfaction: value })}
                 required
               />
             </div>
 
             <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
               <CheckboxGroup
-                label="Q10. 봉리단길에서 아쉬운 점이 있다면? (복수선택 가능)"
+                label="Q11. 봉리단길에서 아쉬운 점이 있다면? (복수선택 가능)"
                 options={IMPROVEMENTS.map(i => ({ label: i, value: i }))}
-                values={formData.q10_improvement}
-                onChange={(values) => setFormData({ ...formData, q10_improvement: values })}
+                values={formData.q11_improvement}
+                onChange={(values) => setFormData({ ...formData, q11_improvement: values })}
                 required
               />
             </div>
 
             <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
               <CheckboxGroup
-                label="Q11. 봉리단길 외에 방문하고 싶은 김해 관광지는? (복수선택 가능)"
+                label="Q12. 봉리단길 외에 방문하고 싶은 김해 관광지는? (복수선택 가능)"
                 options={OTHER_SPOTS.map(o => ({ label: o, value: o }))}
-                values={formData.q11_other_spots}
-                onChange={(values) => setFormData({ ...formData, q11_other_spots: values })}
+                values={formData.q12_other_spots}
+                onChange={(values) => setFormData({ ...formData, q12_other_spots: values })}
                 required
               />
             </div>

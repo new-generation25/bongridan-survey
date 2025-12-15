@@ -21,8 +21,8 @@ export async function POST(request: NextRequest) {
     const data: SurveyStep1Data = await request.json();
 
     // 필수 필드 검증
-    if (!data.device_id || !data.q1_region || !data.q2_age || !data.q3_purpose ||
-        !data.q4_channel || !data.q5_budget || !data.q6_companion) {
+    if (!data.device_id || !data.q1_region || !data.q2_age || !data.q3_activity ||
+        !data.q4_occasion || !data.q5_channel || !data.q6_budget || !data.q7_companion) {
       return NextResponse.json(
         { success: false, message: ERROR_MESSAGES.INVALID_REQUEST },
         { status: 400 }
@@ -49,10 +49,11 @@ export async function POST(request: NextRequest) {
       device_id: data.device_id,
       q1_region: data.q1_region,
       q2_age: data.q2_age,
-      q3_purpose: data.q3_purpose,
-      q4_channel: data.q4_channel,
-      q5_budget: data.q5_budget,
-      q6_companion: data.q6_companion,
+      q3_activity: data.q3_activity,
+      q4_occasion: data.q4_occasion,
+      q5_channel: data.q5_channel,
+      q6_budget: data.q6_budget,
+      q7_companion: data.q7_companion,
       response_time_step1: data.response_time_step1,
       stage_completed: 1,
     };

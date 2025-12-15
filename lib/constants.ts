@@ -30,18 +30,27 @@ export const AGE_GROUPS = [
   '50대 이상'
 ] as const;
 
-// 방문 목적 옵션 (Q3, 복수 선택)
-export const VISIT_PURPOSES = [
+// 이용 예정 장소/활동 옵션 (Q3, 복수 선택)
+export const VISIT_ACTIVITIES = [
   '카페/디저트',
   '식사',
   '쇼핑/구경',
-  '데이트',
-  '친구/지인 모임',
+  '사진 촬영',
   '산책/여가',
   '기타'
 ] as const;
 
-// 방문 경로 옵션 (Q4)
+// 방문 계기 옵션 (Q4, 단일 선택)
+export const VISIT_OCCASIONS = [
+  '일상적인 외출/휴식',
+  '특별한 날 (생일, 기념일 등)',
+  '관광/여행 중',
+  '업무/미팅',
+  '우연히 지나가다',
+  '기타'
+] as const;
+
+// 방문 경로 옵션 (Q5)
 export const VISIT_CHANNELS = [
   'SNS (인스타그램, 유튜브 등)',
   '지인 추천',
@@ -51,7 +60,7 @@ export const VISIT_CHANNELS = [
   '기타'
 ] as const;
 
-// 예산 옵션 (Q5)
+// 예산 옵션 (Q6)
 export const BUDGETS = [
   '1만원 미만',
   '1~2만원',
@@ -60,7 +69,7 @@ export const BUDGETS = [
   '5만원 이상'
 ] as const;
 
-// 동행 옵션 (Q6)
+// 동행 옵션 (Q7)
 export const COMPANIONS = [
   '혼자',
   '친구',
@@ -70,7 +79,7 @@ export const COMPANIONS = [
   '기타'
 ] as const;
 
-// 방문 빈도 옵션 (Q7)
+// 방문 빈도 옵션 (Q8)
 export const FREQUENCIES = [
   '처음 방문',
   '연 1~2회',
@@ -78,7 +87,7 @@ export const FREQUENCIES = [
   '주 1회 이상'
 ] as const;
 
-// 체류 시간 옵션 (Q8)
+// 체류 시간 옵션 (Q9)
 export const DURATIONS = [
   '1시간 미만',
   '1~2시간',
@@ -86,7 +95,7 @@ export const DURATIONS = [
   '1박'
 ] as const;
 
-// 만족도 옵션 (Q9)
+// 만족도 옵션 (Q10)
 export const SATISFACTIONS = [
   '매우 만족',
   '만족',
@@ -95,7 +104,7 @@ export const SATISFACTIONS = [
   '매우 불만족'
 ] as const;
 
-// 개선사항 옵션 (Q10, 복수 선택)
+// 개선사항 옵션 (Q11, 복수 선택)
 export const IMPROVEMENTS = [
   '주차 불편',
   '가게 종류 부족',
@@ -106,7 +115,7 @@ export const IMPROVEMENTS = [
   '기타'
 ] as const;
 
-// 다른 관광지 옵션 (Q11, 복수 선택)
+// 다른 관광지 옵션 (Q12, 복수 선택)
 export const OTHER_SPOTS = [
   '수로왕릉/대성동고분군',
   '김해한옥체험관',
