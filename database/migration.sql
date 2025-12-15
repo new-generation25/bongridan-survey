@@ -40,17 +40,17 @@ CREATE TABLE surveys (
   q1_1_dong VARCHAR(50),
   q2_age VARCHAR(30) NOT NULL,
   q3_activity TEXT[] NOT NULL,
-  q3_1_occasion VARCHAR(50) NOT NULL,
-  q4_channel VARCHAR(50) NOT NULL,
-  q5_budget VARCHAR(30) NOT NULL,
-  q6_companion VARCHAR(30) NOT NULL,
-  
+  q4_occasion VARCHAR(50) NOT NULL,
+  q5_channel VARCHAR(50) NOT NULL,
+  q6_budget VARCHAR(30) NOT NULL,
+  q7_companion VARCHAR(30) NOT NULL,
+
   -- 2단계 추가 문항
-  q7_frequency VARCHAR(30),
-  q8_duration VARCHAR(30),
-  q9_satisfaction VARCHAR(30),
-  q10_improvement TEXT[],
-  q11_other_spots TEXT[],
+  q8_frequency VARCHAR(30),
+  q9_duration VARCHAR(30),
+  q10_satisfaction VARCHAR(30),
+  q11_improvement TEXT[],
+  q12_other_spots TEXT[],
   
   -- 메타 정보
   stage_completed INTEGER DEFAULT 1,

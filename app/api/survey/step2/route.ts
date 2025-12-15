@@ -8,8 +8,8 @@ export async function POST(request: NextRequest) {
     const data: SurveyStep2Data = await request.json();
 
     // 필수 필드 검증
-    if (!data.survey_id || !data.q7_frequency || !data.q8_duration || 
-        !data.q9_satisfaction || !data.q10_improvement || !data.q11_other_spots) {
+    if (!data.survey_id || !data.q8_frequency || !data.q9_duration ||
+        !data.q10_satisfaction || !data.q11_improvement || !data.q12_other_spots) {
       return NextResponse.json(
         { success: false, message: ERROR_MESSAGES.INVALID_REQUEST },
         { status: 400 }
@@ -20,11 +20,11 @@ export async function POST(request: NextRequest) {
     const { data: survey, error } = await supabaseAdmin
       .from('surveys')
       .update({
-        q7_frequency: data.q7_frequency,
-        q8_duration: data.q8_duration,
-        q9_satisfaction: data.q9_satisfaction,
-        q10_improvement: data.q10_improvement,
-        q11_other_spots: data.q11_other_spots,
+        q8_frequency: data.q8_frequency,
+        q9_duration: data.q9_duration,
+        q10_satisfaction: data.q10_satisfaction,
+        q11_improvement: data.q11_improvement,
+        q12_other_spots: data.q12_other_spots,
         response_time_step2: data.response_time_step2,
         stage_completed: 2,
       })

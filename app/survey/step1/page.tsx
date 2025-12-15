@@ -26,30 +26,30 @@ export default function SurveyStep1Page() {
     q1_1_dong: '',
     q2_age: '',
     q3_activity: [] as string[],
-    q3_1_occasion: '',
-    q4_channel: '',
-    q5_budget: '',
-    q6_companion: '',
+    q4_occasion: '',
+    q5_channel: '',
+    q6_budget: '',
+    q7_companion: '',
   });
 
   // Step2 데이터
   const [step2Data, setStep2Data] = useState({
-    q7_frequency: '',
-    q8_duration: '',
-    q9_satisfaction: '',
-    q10_improvement: [] as string[],
-    q11_other_spots: [] as string[],
+    q8_frequency: '',
+    q9_duration: '',
+    q10_satisfaction: '',
+    q11_improvement: [] as string[],
+    q12_other_spots: [] as string[],
   });
 
   const showDongSelect = step1Data.q1_region === '김해시';
 
   // 전체 문항 수 계산 (Q1-1은 김해시 선택 시에만 포함)
-  // Step1: Q1, (Q1-1), Q2, Q3, Q3-1, Q4, Q5, Q6 = 7문항 (김해시: 8문항)
-  // Step2: Q7, Q8, Q9, Q10, Q11 = 5문항
+  // Step1: Q1, (Q1-1), Q2, Q3, Q4, Q5, Q6, Q7 = 7문항 (김해시: 8문항)
+  // Step2: Q8, Q9, Q10, Q11, Q12 = 5문항
   // 총 12문항 (김해시: 13문항)
   const getTotalQuestions = () => {
-    const step1Questions = showDongSelect ? 8 : 7; // Q1, (Q1-1), Q2, Q3, Q3-1, Q4, Q5, Q6
-    const step2Questions = showStep2 ? 5 : 0; // Q7, Q8, Q9, Q10, Q11
+    const step1Questions = showDongSelect ? 8 : 7; // Q1, (Q1-1), Q2, Q3, Q4, Q5, Q6, Q7
+    const step2Questions = showStep2 ? 5 : 0; // Q8, Q9, Q10, Q11, Q12
     return step1Questions + step2Questions;
   };
 
@@ -61,17 +61,17 @@ export default function SurveyStep1Page() {
     if (showDongSelect && step1Data.q1_1_dong) count++;
     if (step1Data.q2_age) count++;
     if (step1Data.q3_activity.length > 0) count++;
-    if (step1Data.q3_1_occasion) count++;
-    if (step1Data.q4_channel) count++;
-    if (step1Data.q5_budget) count++;
-    if (step1Data.q6_companion) count++;
+    if (step1Data.q4_occasion) count++;
+    if (step1Data.q5_channel) count++;
+    if (step1Data.q6_budget) count++;
+    if (step1Data.q7_companion) count++;
     // Step2 (표시될 때만)
     if (showStep2) {
-      if (step2Data.q7_frequency) count++;
-      if (step2Data.q8_duration) count++;
-      if (step2Data.q9_satisfaction) count++;
-      if (step2Data.q10_improvement.length > 0) count++;
-      if (step2Data.q11_other_spots.length > 0) count++;
+      if (step2Data.q8_frequency) count++;
+      if (step2Data.q9_duration) count++;
+      if (step2Data.q10_satisfaction) count++;
+      if (step2Data.q11_improvement.length > 0) count++;
+      if (step2Data.q12_other_spots.length > 0) count++;
     }
     return count;
   };
@@ -82,8 +82,8 @@ export default function SurveyStep1Page() {
   // Step1 필수 항목 확인
   const isStep1Valid = () => {
     const basicValid = step1Data.q1_region && step1Data.q2_age &&
-      step1Data.q3_activity.length > 0 && step1Data.q3_1_occasion &&
-      step1Data.q4_channel && step1Data.q5_budget && step1Data.q6_companion;
+      step1Data.q3_activity.length > 0 && step1Data.q4_occasion &&
+      step1Data.q5_channel && step1Data.q6_budget && step1Data.q7_companion;
 
     if (step1Data.q1_region === '김해시') {
       return basicValid && step1Data.q1_1_dong;
@@ -93,8 +93,8 @@ export default function SurveyStep1Page() {
 
   // Step2 필수 항목 확인
   const isStep2Valid = () => {
-    return step2Data.q7_frequency && step2Data.q8_duration && step2Data.q9_satisfaction &&
-      step2Data.q10_improvement.length > 0 && step2Data.q11_other_spots.length > 0;
+    return step2Data.q8_frequency && step2Data.q9_duration && step2Data.q10_satisfaction &&
+      step2Data.q11_improvement.length > 0 && step2Data.q12_other_spots.length > 0;
   };
 
   // 추가 설문하기 - Step2 표시
@@ -305,44 +305,44 @@ export default function SurveyStep1Page() {
 
               <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
                 <RadioGroup
-                  label="Q3-1. 방문 계기"
-                  name="q3_1_occasion"
+                  label="Q4. 방문 계기"
+                  name="q4_occasion"
                   options={VISIT_OCCASIONS.map(o => ({ label: o, value: o }))}
-                  value={step1Data.q3_1_occasion}
-                  onChange={(value) => setStep1Data({ ...step1Data, q3_1_occasion: value })}
+                  value={step1Data.q4_occasion}
+                  onChange={(value) => setStep1Data({ ...step1Data, q4_occasion: value })}
                   required
                 />
               </div>
 
               <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
                 <RadioGroup
-                  label="Q4. 봉리단길을 어떻게 알게 되셨나요?"
-                  name="q4_channel"
+                  label="Q5. 봉리단길을 어떻게 알게 되셨나요?"
+                  name="q5_channel"
                   options={VISIT_CHANNELS.map(c => ({ label: c, value: c }))}
-                  value={step1Data.q4_channel}
-                  onChange={(value) => setStep1Data({ ...step1Data, q4_channel: value })}
+                  value={step1Data.q5_channel}
+                  onChange={(value) => setStep1Data({ ...step1Data, q5_channel: value })}
                   required
                 />
               </div>
 
               <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
                 <RadioGroup
-                  label="Q5. 오늘 1인 예상 지출 금액"
-                  name="q5_budget"
+                  label="Q6. 오늘 1인 예상 지출 금액"
+                  name="q6_budget"
                   options={BUDGETS.map(b => ({ label: b, value: b }))}
-                  value={step1Data.q5_budget}
-                  onChange={(value) => setStep1Data({ ...step1Data, q5_budget: value })}
+                  value={step1Data.q6_budget}
+                  onChange={(value) => setStep1Data({ ...step1Data, q6_budget: value })}
                   required
                 />
               </div>
 
               <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
                 <RadioGroup
-                  label="Q6. 누구와 함께 방문하셨나요?"
-                  name="q6_companion"
+                  label="Q7. 누구와 함께 방문하셨나요?"
+                  name="q7_companion"
                   options={COMPANIONS.map(c => ({ label: c, value: c }))}
-                  value={step1Data.q6_companion}
-                  onChange={(value) => setStep1Data({ ...step1Data, q6_companion: value })}
+                  value={step1Data.q7_companion}
+                  onChange={(value) => setStep1Data({ ...step1Data, q7_companion: value })}
                   required
                 />
               </div>
@@ -393,53 +393,53 @@ export default function SurveyStep1Page() {
               <div className="space-y-6">
                 <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
                   <RadioGroup
-                    label="Q7. 봉리단길 방문 빈도"
-                    name="q7_frequency"
+                    label="Q8. 봉리단길 방문 빈도"
+                    name="q8_frequency"
                     options={FREQUENCIES.map(f => ({ label: f, value: f }))}
-                    value={step2Data.q7_frequency}
-                    onChange={(value) => setStep2Data({ ...step2Data, q7_frequency: value })}
+                    value={step2Data.q8_frequency}
+                    onChange={(value) => setStep2Data({ ...step2Data, q8_frequency: value })}
                     required
                   />
                 </div>
 
                 <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
                   <RadioGroup
-                    label="Q8. 오늘 체류 예상 시간"
-                    name="q8_duration"
+                    label="Q9. 오늘 체류 예상 시간"
+                    name="q9_duration"
                     options={DURATIONS.map(d => ({ label: d, value: d }))}
-                    value={step2Data.q8_duration}
-                    onChange={(value) => setStep2Data({ ...step2Data, q8_duration: value })}
+                    value={step2Data.q9_duration}
+                    onChange={(value) => setStep2Data({ ...step2Data, q9_duration: value })}
                     required
                   />
                 </div>
 
                 <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
                   <RadioGroup
-                    label="Q9. 봉리단길 전반적 만족도"
-                    name="q9_satisfaction"
+                    label="Q10. 봉리단길 전반적 만족도"
+                    name="q10_satisfaction"
                     options={SATISFACTIONS.map(s => ({ label: s, value: s }))}
-                    value={step2Data.q9_satisfaction}
-                    onChange={(value) => setStep2Data({ ...step2Data, q9_satisfaction: value })}
+                    value={step2Data.q10_satisfaction}
+                    onChange={(value) => setStep2Data({ ...step2Data, q10_satisfaction: value })}
                     required
                   />
                 </div>
 
                 <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
                   <CheckboxGroup
-                    label="Q10. 봉리단길에서 아쉬운 점이 있다면? (복수선택 가능)"
+                    label="Q11. 봉리단길에서 아쉬운 점이 있다면? (복수선택 가능)"
                     options={IMPROVEMENTS.map(i => ({ label: i, value: i }))}
-                    values={step2Data.q10_improvement}
-                    onChange={(values) => setStep2Data({ ...step2Data, q10_improvement: values })}
+                    values={step2Data.q11_improvement}
+                    onChange={(values) => setStep2Data({ ...step2Data, q11_improvement: values })}
                     required
                   />
                 </div>
 
                 <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
                   <CheckboxGroup
-                    label="Q11. 봉리단길 외에 방문하고 싶은 김해 관광지는? (복수선택 가능)"
+                    label="Q12. 봉리단길 외에 방문하고 싶은 김해 관광지는? (복수선택 가능)"
                     options={OTHER_SPOTS.map(o => ({ label: o, value: o }))}
-                    values={step2Data.q11_other_spots}
-                    onChange={(values) => setStep2Data({ ...step2Data, q11_other_spots: values })}
+                    values={step2Data.q12_other_spots}
+                    onChange={(values) => setStep2Data({ ...step2Data, q12_other_spots: values })}
                     required
                   />
                 </div>
