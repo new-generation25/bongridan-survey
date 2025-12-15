@@ -30,14 +30,23 @@ export const AGE_GROUPS = [
   '50대 이상'
 ] as const;
 
-// 방문 목적 옵션 (Q3, 복수 선택)
-export const VISIT_PURPOSES = [
+// 이용 예정 장소/활동 옵션 (Q3, 복수 선택)
+export const VISIT_ACTIVITIES = [
   '카페/디저트',
   '식사',
   '쇼핑/구경',
-  '데이트',
-  '친구/지인 모임',
+  '사진 촬영',
   '산책/여가',
+  '기타'
+] as const;
+
+// 방문 계기 옵션 (Q3-1, 단일 선택)
+export const VISIT_OCCASIONS = [
+  '일상적인 외출/휴식',
+  '특별한 날 (생일, 기념일 등)',
+  '관광/여행 중',
+  '업무/미팅',
+  '우연히 지나가다',
   '기타'
 ] as const;
 

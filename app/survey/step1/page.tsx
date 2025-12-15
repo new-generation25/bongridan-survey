@@ -9,7 +9,7 @@ import CheckboxGroup from '@/components/ui/CheckboxGroup';
 import Loading from '@/components/ui/Loading';
 import { getDeviceId, storage } from '@/lib/utils';
 import {
-  REGIONS, GIMHAE_DONGS, AGE_GROUPS, VISIT_PURPOSES, VISIT_CHANNELS, BUDGETS, COMPANIONS,
+  REGIONS, GIMHAE_DONGS, AGE_GROUPS, VISIT_ACTIVITIES, VISIT_OCCASIONS, VISIT_CHANNELS, BUDGETS, COMPANIONS,
   FREQUENCIES, DURATIONS, SATISFACTIONS, IMPROVEMENTS, OTHER_SPOTS
 } from '@/lib/constants';
 
@@ -25,7 +25,8 @@ export default function SurveyStep1Page() {
     q1_region: '',
     q1_1_dong: '',
     q2_age: '',
-    q3_purpose: [] as string[],
+    q3_activity: [] as string[],
+    q3_1_occasion: '',
     q4_channel: '',
     q5_budget: '',
     q6_companion: '',
@@ -42,40 +43,47 @@ export default function SurveyStep1Page() {
 
   const showDongSelect = step1Data.q1_region === '김해시';
 
-  // Step1 진행률 계산 (각 문항 10%씩)
-  const calculateStep1Progress = () => {
-    let progress = 0;
-    if (step1Data.q1_region) progress += 10;
-    if (showDongSelect && step1Data.q1_1_dong) progress += 10;
-    if (step1Data.q2_age) progress += 10;
-    if (step1Data.q3_purpose.length > 0) progress += 10;
-    if (step1Data.q4_channel) progress += 10;
-    if (step1Data.q5_budget) progress += 10;
-    if (step1Data.q6_companion) progress += 10;
-    return progress;
+  // 전체 문항 수 계산 (Q1-1은 김해시 선택 시에만 포함)
+  // Step1: Q1, (Q1-1), Q2, Q3, Q3-1, Q4, Q5, Q6 = 7문항 (김해시: 8문항)
+  // Step2: Q7, Q8, Q9, Q10, Q11 = 5문항
+  // 총 12문항 (김해시: 13문항)
+  const getTotalQuestions = () => {
+    const step1Questions = showDongSelect ? 8 : 7; // Q1, (Q1-1), Q2, Q3, Q3-1, Q4, Q5, Q6
+    const step2Questions = showStep2 ? 5 : 0; // Q7, Q8, Q9, Q10, Q11
+    return step1Questions + step2Questions;
   };
 
-  // Step2 진행률 계산 (각 문항 10%씩)
-  const calculateStep2Progress = () => {
-    let progress = 0;
-    if (step2Data.q7_frequency) progress += 10;
-    if (step2Data.q8_duration) progress += 10;
-    if (step2Data.q9_satisfaction) progress += 10;
-    if (step2Data.q10_improvement.length > 0) progress += 10;
-    if (step2Data.q11_other_spots.length > 0) progress += 10;
-    return progress;
+  // 응답한 문항 수 계산
+  const getAnsweredQuestions = () => {
+    let count = 0;
+    // Step1
+    if (step1Data.q1_region) count++;
+    if (showDongSelect && step1Data.q1_1_dong) count++;
+    if (step1Data.q2_age) count++;
+    if (step1Data.q3_activity.length > 0) count++;
+    if (step1Data.q3_1_occasion) count++;
+    if (step1Data.q4_channel) count++;
+    if (step1Data.q5_budget) count++;
+    if (step1Data.q6_companion) count++;
+    // Step2 (표시될 때만)
+    if (showStep2) {
+      if (step2Data.q7_frequency) count++;
+      if (step2Data.q8_duration) count++;
+      if (step2Data.q9_satisfaction) count++;
+      if (step2Data.q10_improvement.length > 0) count++;
+      if (step2Data.q11_other_spots.length > 0) count++;
+    }
+    return count;
   };
 
-  // 전체 진행률
-  const progress = showStep2
-    ? calculateStep1Progress() + calculateStep2Progress()
-    : calculateStep1Progress();
+  // 전체 진행률 (응답 문항 수 / 전체 문항 수 * 100)
+  const progress = Math.round((getAnsweredQuestions() / getTotalQuestions()) * 100);
 
   // Step1 필수 항목 확인
   const isStep1Valid = () => {
     const basicValid = step1Data.q1_region && step1Data.q2_age &&
-      step1Data.q3_purpose.length > 0 && step1Data.q4_channel &&
-      step1Data.q5_budget && step1Data.q6_companion;
+      step1Data.q3_activity.length > 0 && step1Data.q3_1_occasion &&
+      step1Data.q4_channel && step1Data.q5_budget && step1Data.q6_companion;
 
     if (step1Data.q1_region === '김해시') {
       return basicValid && step1Data.q1_1_dong;
@@ -287,10 +295,21 @@ export default function SurveyStep1Page() {
 
               <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
                 <CheckboxGroup
-                  label="Q3. 오늘 봉리단길 방문 목적 (복수선택 가능)"
-                  options={VISIT_PURPOSES.map(p => ({ label: p, value: p }))}
-                  values={step1Data.q3_purpose}
-                  onChange={(values) => setStep1Data({ ...step1Data, q3_purpose: values })}
+                  label="Q3. 오늘 이용 예정 (복수선택 가능)"
+                  options={VISIT_ACTIVITIES.map(a => ({ label: a, value: a }))}
+                  values={step1Data.q3_activity}
+                  onChange={(values) => setStep1Data({ ...step1Data, q3_activity: values })}
+                  required
+                />
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
+                <RadioGroup
+                  label="Q3-1. 방문 계기"
+                  name="q3_1_occasion"
+                  options={VISIT_OCCASIONS.map(o => ({ label: o, value: o }))}
+                  value={step1Data.q3_1_occasion}
+                  onChange={(value) => setStep1Data({ ...step1Data, q3_1_occasion: value })}
                   required
                 />
               </div>

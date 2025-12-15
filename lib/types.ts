@@ -9,7 +9,8 @@ export interface Survey {
   q1_region: string;
   q1_1_dong?: string;
   q2_age: string;
-  q3_purpose: string[];
+  q3_activity: string[];
+  q3_1_occasion: string;
   q4_channel: string;
   q5_budget: string;
   q6_companion: string;
@@ -89,7 +90,8 @@ export interface SurveyStep1Data {
   q1_region: string;
   q1_1_dong?: string;
   q2_age: string;
-  q3_purpose: string[];
+  q3_activity: string[];
+  q3_1_occasion: string;
   q4_channel: string;
   q5_budget: string;
   q6_companion: string;
