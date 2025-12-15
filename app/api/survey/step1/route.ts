@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     const data: SurveyStep1Data = await request.json();
 
     // 필수 필드 검증
-    if (!data.device_id || !data.q1_region || !data.q2_age || !data.q3_purpose || 
+    if (!data.device_id || !data.q1_region || !data.q2_age || !data.q3_purpose ||
         !data.q4_channel || !data.q5_budget || !data.q6_companion) {
       return NextResponse.json(
         { success: false, message: ERROR_MESSAGES.INVALID_REQUEST },
@@ -29,13 +29,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 중복 응답 확인 (3일 이내 동일 기기)
-    const isDuplicate = await supabaseHelpers.checkDuplicateSurvey(data.device_id);
-    if (isDuplicate) {
-      return NextResponse.json(
-        { success: false, message: '이전에 참여하였습니다. 이전 응답 후 3일 후에 응답이 가능합니다.' },
-        { status: 409 }
-      );
+    // User-Agent로 모바일 여부 확인
+    const userAgent = request.headers.get('user-agent') || '';
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+
+    // 중복 응답 확인 (모바일에서만 적용, 3일 이내 동일 기기)
+    if (isMobile) {
+      const isDuplicate = await supabaseHelpers.checkDuplicateSurvey(data.device_id);
+      if (isDuplicate) {
+        return NextResponse.json(
+          { success: false, message: '이전에 참여하였습니다. 이전 응답 후 3일 후에 응답이 가능합니다.' },
+          { status: 409 }
+        );
+      }
     }
 
     // 설문 데이터 삽입
