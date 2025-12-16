@@ -122,7 +122,7 @@ INSERT INTO settings (key, value) VALUES
   ('coupon_amount', '500'),
   ('coupon_validity_hours', '24'),
   ('survey_active', 'true'),
-  ('total_budget', '200000'),
+  ('total_budget', '280000'),
   ('raffle_prizes', '3'),
   ('admin_password', 'change_this_password_in_production');
 

@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
       .eq('key', 'total_budget')
       .single();
 
-    const totalBudget = parseInt(budgetSetting?.value || '200000');
+    const totalBudget = parseInt(budgetSetting?.value || '280000');
     const remaining = totalBudget - totalAmountUsed;
     const usageRate = (totalAmountUsed / totalBudget) * 100;
 
