@@ -11,17 +11,51 @@ import { storage } from '@/lib/utils';
 export default function RafflePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [phoneError, setPhoneError] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
     agreed_privacy: false,
   });
 
+  // 전화번호 유효성 검사 (한국 휴대폰 번호)
+  const validatePhone = (phone: string): boolean => {
+    // 숫자만 추출
+    const numbers = phone.replace(/[^0-9]/g, '');
+    // 010, 011, 016, 017, 018, 019로 시작하는 10-11자리
+    const phoneRegex = /^01[0-9]{8,9}$/;
+    return phoneRegex.test(numbers);
+  };
+
+  // 전화번호 포맷팅 (010-1234-5678 형식)
+  const formatPhone = (value: string): string => {
+    const numbers = value.replace(/[^0-9]/g, '');
+    if (numbers.length <= 3) return numbers;
+    if (numbers.length <= 7) return `${numbers.slice(0, 3)}-${numbers.slice(3)}`;
+    return `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7, 11)}`;
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhone(e.target.value);
+    setFormData({ ...formData, phone: formatted });
+
+    if (formatted && !validatePhone(formatted)) {
+      setPhoneError('올바른 휴대폰 번호를 입력해주세요 (예: 010-1234-5678)');
+    } else {
+      setPhoneError('');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.name || !formData.phone) {
       alert('이름과 전화번호를 입력해주세요.');
+      return;
+    }
+
+    if (!validatePhone(formData.phone)) {
+      alert('올바른 휴대폰 번호를 입력해주세요.');
       return;
     }
 
@@ -99,14 +133,19 @@ export default function RafflePage() {
               required
             />
 
-            <Input
-              label="전화번호"
-              type="tel"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              placeholder="010-1234-5678"
-              required
-            />
+            <div>
+              <Input
+                label="전화번호"
+                type="tel"
+                value={formData.phone}
+                onChange={handlePhoneChange}
+                placeholder="010-1234-5678"
+                required
+              />
+              {phoneError && (
+                <p className="mt-1 text-sm text-red-500">{phoneError}</p>
+              )}
+            </div>
 
             <div className="bg-gray-50 rounded-lg p-4 space-y-3">
               <label className="flex items-start gap-3 cursor-pointer">

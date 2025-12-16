@@ -14,6 +14,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 전화번호 유효성 검사 (한국 휴대폰 번호)
+    const phoneNumbers = phone.replace(/[^0-9]/g, '');
+    const phoneRegex = /^01[0-9]{8,9}$/;
+    if (!phoneRegex.test(phoneNumbers)) {
+      return NextResponse.json(
+        { success: false, message: '올바른 휴대폰 번호를 입력해주세요.' },
+        { status: 400 }
+      );
+    }
+
     // 중복 응모 확인 (전화번호 기준)
     const isDuplicate = await supabaseHelpers.checkDuplicateRaffleEntry(phone);
     if (isDuplicate) {
