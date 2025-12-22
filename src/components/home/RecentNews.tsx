@@ -37,8 +37,8 @@ export function RecentNews() {
 
         fetchNotices();
         
-        // 주기적으로 데이터 새로고침 (30초마다)
-        const interval = setInterval(fetchNotices, 30000);
+        // 주기적으로 데이터 새로고침 (10초마다)
+        const interval = setInterval(fetchNotices, 10000);
         return () => clearInterval(interval);
     }, []);
 

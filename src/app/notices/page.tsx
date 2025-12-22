@@ -23,7 +23,6 @@ export default function NoticesPage() {
 
     useEffect(() => {
         const fetchNotices = async () => {
-            setLoading(true);
             try {
                 const result = await pb.collection('notices').getList(1, 100, {
                     sort: '-date',
@@ -38,6 +37,10 @@ export default function NoticesPage() {
         };
 
         fetchNotices();
+        
+        // 주기적으로 데이터 새로고침 (10초마다)
+        const interval = setInterval(fetchNotices, 10000);
+        return () => clearInterval(interval);
     }, []);
 
     return (
