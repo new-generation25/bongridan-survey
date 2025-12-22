@@ -20,7 +20,7 @@ import {
     Redo,
     FileText
 } from 'lucide-react';
-import { useCallback, useRef, useEffect, useState, useMemo } from 'react';
+import { useCallback, useRef, useEffect, useState } from 'react';
 import pb from '@/lib/pocketbase';
 
 interface RichTextEditorProps {
@@ -29,39 +29,41 @@ interface RichTextEditorProps {
     placeholder?: string;
 }
 
+// Extensions를 컴포넌트 외부에서 정의하여 한 번만 생성
+const createExtensions = (placeholder: string) => [
+    StarterKit.configure({
+        heading: {
+            levels: [1, 2, 3],
+        },
+    }),
+    Image.configure({
+        inline: true,
+        allowBase64: true,
+    }),
+    Link.configure({
+        openOnClick: false,
+        HTMLAttributes: {
+            class: 'text-blue-600 underline',
+        },
+    }),
+    Placeholder.configure({
+        placeholder,
+    }),
+    Underline,
+];
+
 export function RichTextEditor({ content, onChange, placeholder = '내용을 입력하세요...' }: RichTextEditorProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const imageInputRef = useRef<HTMLInputElement>(null);
     const [isMounted, setIsMounted] = useState(false);
+    const extensionsRef = useRef(createExtensions(placeholder));
 
     useEffect(() => {
         setIsMounted(true);
     }, []);
 
-    const extensions = useMemo(() => [
-        StarterKit.configure({
-            heading: {
-                levels: [1, 2, 3],
-            },
-        }),
-        Image.configure({
-            inline: true,
-            allowBase64: true,
-        }),
-        Link.configure({
-            openOnClick: false,
-            HTMLAttributes: {
-                class: 'text-blue-600 underline',
-            },
-        }),
-        Placeholder.configure({
-            placeholder,
-        }),
-        Underline,
-    ], [placeholder]);
-
     const editor = useEditor({
-        extensions,
+        extensions: extensionsRef.current,
         content,
         onUpdate: ({ editor }) => {
             onChange(editor.getHTML());
@@ -232,10 +234,7 @@ export function RichTextEditor({ content, onChange, placeholder = '내용을 입
                         type="button"
                         variant={editor.isActive('underline') ? 'default' : 'ghost'}
                         size="sm"
-                        onClick={() => {
-                            console.log('Underline clicked');
-                            editor.chain().focus().toggleUnderline().run();
-                        }}
+                        onClick={() => editor.chain().focus().toggleUnderline().run()}
                     >
                         <UnderlineIcon className="h-4 w-4" />
                     </Button>
@@ -254,10 +253,7 @@ export function RichTextEditor({ content, onChange, placeholder = '내용을 입
                         type="button"
                         variant={editor.isActive('heading', { level: 1 }) ? 'default' : 'ghost'}
                         size="sm"
-                        onClick={() => {
-                            console.log('H1 clicked');
-                            editor.chain().focus().toggleHeading({ level: 1 }).run();
-                        }}
+                        onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
                     >
                         H1
                     </Button>
