@@ -1,7 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin, supabaseHelpers } from '@/lib/supabase';
-import { ERROR_MESSAGES, COUPON_CONFIG } from '@/lib/constants';
+import {
+  ERROR_MESSAGES,
+  COUPON_CONFIG,
+  REGIONS,
+  GIMHAE_DONGS,
+  AGE_GROUPS,
+  VISIT_ACTIVITIES,
+  VISIT_OCCASIONS,
+  VISIT_CHANNELS,
+  BUDGETS,
+  COMPANIONS
+} from '@/lib/constants';
 import type { SurveyStep1Data } from '@/lib/types';
+
+// 허용 옵션 검증 함수
+function validateOptions(data: SurveyStep1Data): string | null {
+  if (!REGIONS.includes(data.q1_region as typeof REGIONS[number])) {
+    return '유효하지 않은 지역입니다.';
+  }
+  if (data.q1_region === '김해시' && data.q1_1_dong &&
+      !GIMHAE_DONGS.includes(data.q1_1_dong as typeof GIMHAE_DONGS[number])) {
+    return '유효하지 않은 동 정보입니다.';
+  }
+  if (!AGE_GROUPS.includes(data.q2_age as typeof AGE_GROUPS[number])) {
+    return '유효하지 않은 연령대입니다.';
+  }
+  if (!Array.isArray(data.q3_activity) || data.q3_activity.length === 0 ||
+      !data.q3_activity.every(a => VISIT_ACTIVITIES.includes(a as typeof VISIT_ACTIVITIES[number]))) {
+    return '유효하지 않은 이용예정 활동입니다.';
+  }
+  if (!VISIT_OCCASIONS.includes(data.q4_occasion as typeof VISIT_OCCASIONS[number])) {
+    return '유효하지 않은 방문계기입니다.';
+  }
+  if (!VISIT_CHANNELS.includes(data.q5_channel as typeof VISIT_CHANNELS[number])) {
+    return '유효하지 않은 방문경로입니다.';
+  }
+  if (!BUDGETS.includes(data.q6_budget as typeof BUDGETS[number])) {
+    return '유효하지 않은 예산입니다.';
+  }
+  if (!COMPANIONS.includes(data.q7_companion as typeof COMPANIONS[number])) {
+    return '유효하지 않은 동행자입니다.';
+  }
+  return null;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,19 +71,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // User-Agent로 모바일 여부 확인
-    const userAgent = request.headers.get('user-agent') || '';
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+    // 허용 옵션 검증
+    const validationError = validateOptions(data);
+    if (validationError) {
+      return NextResponse.json(
+        { success: false, message: validationError },
+        { status: 400 }
+      );
+    }
 
-    // 중복 응답 확인 (모바일에서만 적용, 3일 이내 동일 기기)
-    if (isMobile) {
-      const isDuplicate = await supabaseHelpers.checkDuplicateSurvey(data.device_id);
-      if (isDuplicate) {
-        return NextResponse.json(
-          { success: false, message: '이전에 참여하였습니다. 이전 응답 후 3일 후에 응답이 가능합니다.' },
-          { status: 409 }
-        );
-      }
+    // 중복 응답 확인 (모든 기기에서 적용, 3일 이내 동일 기기)
+    const isDuplicate = await supabaseHelpers.checkDuplicateSurvey(data.device_id);
+    if (isDuplicate) {
+      return NextResponse.json(
+        { success: false, message: '이전에 참여하였습니다. 이전 응답 후 3일 후에 응답이 가능합니다.' },
+        { status: 409 }
+      );
     }
 
     // 설문 데이터 삽입

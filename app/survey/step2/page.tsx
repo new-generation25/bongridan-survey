@@ -8,7 +8,7 @@ import RadioGroup from '@/components/ui/RadioGroup';
 import CheckboxGroup from '@/components/ui/CheckboxGroup';
 import ProgressBar from '@/components/ui/ProgressBar';
 import Loading from '@/components/ui/Loading';
-import { storage } from '@/lib/utils';
+import { storage, getDeviceId } from '@/lib/utils';
 import { FREQUENCIES, DURATIONS, SATISFACTIONS, IMPROVEMENTS, OTHER_SPOTS } from '@/lib/constants';
 
 export default function SurveyStep2Page() {
@@ -50,6 +50,7 @@ export default function SurveyStep2Page() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           survey_id: surveyId,
+          device_id: getDeviceId(),
           ...formData,
           response_time_step2: responseTime,
         }),

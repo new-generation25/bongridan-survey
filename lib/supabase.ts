@@ -76,39 +76,59 @@ export const supabaseHelpers = {
     }
   },
 
-  // 쿠폰 코드 생성 (6자리 순차 번호)
+  // 쿠폰 코드 생성 (6자리 순차 번호, Race Condition 방지)
   async generateCouponCode(): Promise<string> {
-    try {
-      // 마지막 쿠폰 코드 조회
-      const { data: lastCoupon, error } = await supabaseAdmin
-        .from('coupons')
-        .select('code')
-        .order('code', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+    const maxRetries = 5;
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('Get last coupon code error:', error);
-        // 에러 발생 시 000001부터 시작
-        return '000001';
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        // 마지막 쿠폰 코드 조회
+        const { data: lastCoupon, error } = await supabaseAdmin
+          .from('coupons')
+          .select('code')
+          .order('code', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (error && error.code !== 'PGRST116') {
+          console.error('Get last coupon code error:', error);
+        }
+
+        let nextCode: number;
+        if (!lastCoupon || !lastCoupon.code) {
+          nextCode = 1;
+        } else {
+          nextCode = parseInt(lastCoupon.code, 10) + 1;
+        }
+
+        // 동시 요청 시 충돌 방지를 위해 랜덤 오프셋 추가
+        if (attempt > 0) {
+          nextCode += Math.floor(Math.random() * 10) + 1;
+        }
+
+        const code = nextCode.toString().padStart(6, '0');
+
+        // 코드 중복 확인 (unique constraint 대신 사전 확인)
+        const { data: existing } = await supabaseAdmin
+          .from('coupons')
+          .select('code')
+          .eq('code', code)
+          .maybeSingle();
+
+        if (!existing) {
+          return code;
+        }
+
+        // 중복이면 다음 시도
+        console.log(`Coupon code ${code} already exists, retrying...`);
+      } catch (error) {
+        console.error(`Generate coupon code attempt ${attempt + 1} error:`, error);
       }
-
-      if (!lastCoupon || !lastCoupon.code) {
-        // 첫 번째 쿠폰
-        return '000001';
-      }
-
-      // 마지막 코드 + 1
-      const lastCode = parseInt(lastCoupon.code, 10);
-      const nextCode = lastCode + 1;
-
-      // 6자리 형식으로 변환 (000001, 000002, ...)
-      return nextCode.toString().padStart(6, '0');
-    } catch (error) {
-      console.error('Generate coupon code error:', error);
-      // 에러 발생 시 000001부터 시작
-      return '000001';
     }
+
+    // 모든 재시도 실패 시 타임스탬프 기반 코드 생성
+    const timestamp = Date.now() % 1000000;
+    return timestamp.toString().padStart(6, '0');
   },
 
   // 쿠폰 만료 시간 계산 (한국 시간 기준)

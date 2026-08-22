@@ -202,6 +202,7 @@ export default function SurveyStep1Page() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           survey_id: step1Result.survey_id,
+          device_id: deviceId,
           ...step2Data,
           response_time_step2: Math.floor((Date.now() - startTime) / 1000) - responseTime,
         }),
