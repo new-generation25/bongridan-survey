@@ -6,6 +6,7 @@ import { Html5Qrcode } from 'html5-qrcode';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Loading from '@/components/ui/Loading';
+import { COUPON_CONFIG } from '@/lib/constants';
 
 // 비디오 스트림에서 프레임을 캡처하여 File 객체로 변환하는 헬퍼 함수
 const captureFrameAsFile = (videoElement: HTMLVideoElement): Promise<File> => {
@@ -271,7 +272,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
 
       // 누적 금액 업데이트 (카메라 유지)
       // API의 total_amount는 단일 쿠폰 금액이므로 500원 사용
-      const addedAmount = 500;
+      const addedAmount = COUPON_CONFIG.AMOUNT;
       
       // 카메라 일시 정지 (검정 화면 표시)
       setCameraPaused(true);
@@ -572,7 +573,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
 
       // 누적 금액 업데이트 (카메라 유지)
       // API의 total_amount는 단일 쿠폰 금액이므로 500원 사용
-      const addedAmount = 500;
+      const addedAmount = COUPON_CONFIG.AMOUNT;
       
       // 누적 금액 업데이트 (함수형 업데이트로 최신 값 사용)
       setTotalAmount((prev) => prev + addedAmount);

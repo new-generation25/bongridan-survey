@@ -143,6 +143,7 @@ export const ERROR_MESSAGES = {
 // 쿠폰 설정
 export const COUPON_CONFIG = {
   AMOUNT: parseInt(process.env.NEXT_PUBLIC_COUPON_AMOUNT || '500'),
-  VALIDITY_HOURS: parseInt(process.env.NEXT_PUBLIC_COUPON_VALIDITY_HOURS || '24')
+  VALIDITY_HOURS: parseInt(process.env.NEXT_PUBLIC_COUPON_VALIDITY_HOURS || '24'),
+  SETTLEMENT_RATE: parseInt(process.env.SETTLEMENT_RATE || '700') // 가맹점 정산 단가
 } as const;
 

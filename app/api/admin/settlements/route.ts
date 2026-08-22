@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { ERROR_MESSAGES } from '@/lib/constants';
+import { ERROR_MESSAGES, COUPON_CONFIG } from '@/lib/constants';
 import { verifyAdminToken } from '@/lib/auth';
 
 // GET: 정산 이력 조회
@@ -48,8 +48,8 @@ export async function GET(request: NextRequest) {
           .eq('used_store_id', store.id)
           .eq('status', 'used');
 
-        // 정산 금액은 쿠폰 사용 건수 × 700원으로 계산
-        const totalAmount = (usedCount || 0) * 700;
+        // 정산 금액은 쿠폰 사용 건수 × SETTLEMENT_RATE원으로 계산
+        const totalAmount = (usedCount || 0) * COUPON_CONFIG.SETTLEMENT_RATE;
 
         // 정산된 금액
         const { data: storeSettlements } = await supabaseAdmin
@@ -166,8 +166,8 @@ export async function POST(request: NextRequest) {
       .eq('used_store_id', store_id)
       .eq('status', 'used');
 
-    // 정산 금액은 쿠폰 사용 건수 × 700원으로 계산
-    const totalAmount = (usedCount || 0) * 700;
+    // 정산 금액은 쿠폰 사용 건수 × SETTLEMENT_RATE원으로 계산
+    const totalAmount = (usedCount || 0) * COUPON_CONFIG.SETTLEMENT_RATE;
     const unsettledAmount = totalAmount - totalSettled;
 
     return NextResponse.json({
