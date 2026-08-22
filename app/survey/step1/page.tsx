@@ -7,6 +7,7 @@ import Button from '@/components/ui/Button';
 import RadioGroup from '@/components/ui/RadioGroup';
 import CheckboxGroup from '@/components/ui/CheckboxGroup';
 import Loading from '@/components/ui/Loading';
+import { useToast } from '@/components/ui/ToastProvider';
 import { getDeviceId, storage } from '@/lib/utils';
 import {
   REGIONS, GIMHAE_DONGS, AGE_GROUPS, VISIT_ACTIVITIES, VISIT_OCCASIONS, VISIT_CHANNELS, BUDGETS, COMPANIONS,
@@ -15,6 +16,7 @@ import {
 
 export default function SurveyStep1Page() {
   const router = useRouter();
+  const { showError } = useToast();
   const [loading, setLoading] = useState(false);
   const [startTime] = useState(Date.now());
   const [showStep2, setShowStep2] = useState(false);
@@ -100,7 +102,7 @@ export default function SurveyStep1Page() {
   // 추가 설문하기 - Step2 표시
   const handleShowStep2 = () => {
     if (!isStep1Valid()) {
-      alert('모든 필수 항목을 입력해주세요.');
+      showError('모든 필수 항목을 입력해주세요.');
       return;
     }
     setShowStep2(true);
@@ -113,7 +115,7 @@ export default function SurveyStep1Page() {
   // 설문 완료 (Step1만 제출)
   const handleCompleteStep1Only = async () => {
     if (!isStep1Valid()) {
-      alert('모든 필수 항목을 입력해주세요.');
+      showError('모든 필수 항목을 입력해주세요.');
       return;
     }
 
@@ -137,7 +139,7 @@ export default function SurveyStep1Page() {
 
       if (!response.ok) {
         console.error('API Error:', { status: response.status, data });
-        alert(data.message || '오류가 발생했습니다.');
+        showError(data.message || '오류가 발생했습니다.');
         setLoading(false);
         return;
       }
@@ -150,7 +152,7 @@ export default function SurveyStep1Page() {
       router.push(`/coupon/${data.coupon_id}`);
     } catch (error) {
       console.error('Submit error:', error);
-      alert('네트워크 오류가 발생했습니다.');
+      showError('네트워크 오류가 발생했습니다.');
       setLoading(false);
     }
   };
@@ -158,11 +160,11 @@ export default function SurveyStep1Page() {
   // 전체 제출 (Step1 + Step2)
   const handleSubmitAll = async () => {
     if (!isStep1Valid()) {
-      alert('1단계 설문의 모든 필수 항목을 입력해주세요.');
+      showError('1단계 설문의 모든 필수 항목을 입력해주세요.');
       return;
     }
     if (!isStep2Valid()) {
-      alert('2단계 설문의 모든 필수 항목을 입력해주세요.');
+      showError('2단계 설문의 모든 필수 항목을 입력해주세요.');
       return;
     }
 
@@ -187,7 +189,7 @@ export default function SurveyStep1Page() {
 
       if (!step1Response.ok) {
         console.error('Step1 API Error:', { status: step1Response.status, data: step1Result });
-        alert(step1Result.message || '오류가 발생했습니다.');
+        showError(step1Result.message || '오류가 발생했습니다.');
         setLoading(false);
         return;
       }
@@ -212,7 +214,7 @@ export default function SurveyStep1Page() {
 
       if (!step2Response.ok) {
         console.error('Step2 API Error:', { status: step2Response.status, data: step2Result });
-        alert(step2Result.message || '오류가 발생했습니다.');
+        showError(step2Result.message || '오류가 발생했습니다.');
         setLoading(false);
         return;
       }
@@ -221,7 +223,7 @@ export default function SurveyStep1Page() {
       router.push(`/coupon/${step1Result.coupon_id}`);
     } catch (error) {
       console.error('Submit error:', error);
-      alert('네트워크 오류가 발생했습니다.');
+      showError('네트워크 오류가 발생했습니다.');
       setLoading(false);
     }
   };

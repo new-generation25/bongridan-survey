@@ -25,7 +25,7 @@ export default function Toast({ message, type = 'info', duration = 3000, onClose
   return (
     <div
       className={cn(
-        'fixed bottom-4 right-4 z-50 px-6 py-4 rounded-lg shadow-lg max-w-md transition-all duration-300',
+        'px-6 py-4 rounded-lg shadow-lg max-w-md transition-all duration-300',
         {
           'bg-success text-white': type === 'success',
           'bg-error text-white': type === 'error',
