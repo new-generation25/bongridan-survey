@@ -14,6 +14,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 가맹점 존재 및 활성화 상태 확인
+    const { data: store, error: storeError } = await supabaseAdmin
+      .from('stores')
+      .select('id, is_active')
+      .eq('id', store_id)
+      .single();
+
+    if (storeError || !store) {
+      return NextResponse.json(
+        { success: false, message: ERROR_MESSAGES.STORE_NOT_FOUND },
+        { status: 404 }
+      );
+    }
+
+    if (!store.is_active) {
+      return NextResponse.json(
+        { success: false, message: '비활성화된 가맹점입니다.' },
+        { status: 403 }
+      );
+    }
+
     // 쿠폰 사용 처리 (원자적 업데이트: status가 'issued'인 경우에만 업데이트)
     const { data: coupon, error: couponError } = await supabaseAdmin
       .from('coupons')
@@ -37,10 +58,7 @@ export async function POST(request: NextRequest) {
           .eq('code', code)
           .maybeSingle();
         
-        console.log('[DEBUG API] Coupon status check:', {code,couponErrorCode:couponError?.code,existingCouponStatus:existingCoupon?.status});
-        
         if (existingCoupon?.status === 'used') {
-          console.log('[DEBUG API] Returning already used error:', {code});
           return NextResponse.json(
             { success: false, message: '이미 사용된 쿠폰입니다' },
             { status: 400 }
@@ -76,8 +94,6 @@ export async function POST(request: NextRequest) {
       .eq('used_store_id', store_id)
       .eq('status', 'used');
 
-    console.log('[DEBUG API] Returning success response:', {code,success:true});
-    
     return NextResponse.json({
       success: true,
       total_amount: coupon.amount,

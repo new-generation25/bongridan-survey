@@ -19,18 +19,13 @@ export async function GET(request: NextRequest) {
     }
 
     const isDefaultPassword = setting.value === 'change_this_password_in_production';
-    const passwordLength = setting.value.length;
 
     return NextResponse.json({
       success: true,
       isDefaultPassword,
-      passwordLength,
-      status: isDefaultPassword 
-        ? '⚠️ 초기 비밀번호입니다. 변경이 필요합니다.' 
+      status: isDefaultPassword
+        ? '⚠️ 초기 비밀번호입니다. 변경이 필요합니다.'
         : '✅ 비밀번호가 변경되었습니다.',
-      hint: isDefaultPassword 
-        ? null 
-        : `비밀번호 길이: ${passwordLength}자 (앞 3자리: ${setting.value.substring(0, 3)}***)`,
     });
   } catch (error) {
     console.error('Check password error:', error);
