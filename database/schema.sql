@@ -113,7 +113,26 @@ INSERT INTO settings (key, value) VALUES
   ('raffle_prizes', '3'),
   ('admin_password', 'change_this_password_in_production');
 
--- 7. 가맹점 초기 데이터 (24개)
+-- 7. api_keys (파트너 API 키)
+CREATE TABLE api_keys (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  key_hash VARCHAR(64) NOT NULL UNIQUE,
+  key_prefix VARCHAR(12) NOT NULL,
+  partner_name VARCHAR(100) NOT NULL,
+  partner_contact VARCHAR(200) NOT NULL,
+  permissions TEXT[] DEFAULT ARRAY['survey', 'coupon'],
+  rate_limit INTEGER DEFAULT 1000,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  last_used_at TIMESTAMP WITH TIME ZONE,
+  expires_at TIMESTAMP WITH TIME ZONE,
+  note TEXT
+);
+
+CREATE INDEX idx_api_keys_hash ON api_keys(key_hash);
+CREATE INDEX idx_api_keys_active ON api_keys(is_active);
+
+-- 8. 가맹점 초기 데이터 (24개)
 INSERT INTO stores (id, name) VALUES
   ('01', '너글스'), ('02', '퐁세'), ('03', '카츠타다이'), ('04', '토그커피샵'),
   ('05', '왓포식당'), ('06', '공원반점'), ('07', '덴웨스'), ('08', '니치니치'),
