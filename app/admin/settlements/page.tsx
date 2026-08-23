@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Loading from '@/components/ui/Loading';
+import { useToast } from '@/components/ui/ToastProvider';
 import Input from '@/components/ui/Input';
 import { storage, formatCurrency, formatNumber, formatDate } from '@/lib/utils';
 
@@ -33,6 +34,7 @@ interface StoreUnsettled {
 
 export default function AdminSettlementsPage() {
   const router = useRouter();
+  const { showError, showSuccess } = useToast();
   const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [storesUnsettled, setStoresUnsettled] = useState<StoreUnsettled[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,7 +75,7 @@ export default function AdminSettlementsPage() {
           router.push('/admin');
           return;
         }
-        alert(result.message || '정산 데이터를 불러오는데 실패했습니다.');
+        showError(result.message || '정산 데이터를 불러오는데 실패했습니다.');
         setLoading(false);
         return;
       }
@@ -84,7 +86,7 @@ export default function AdminSettlementsPage() {
       }
     } catch (error) {
       console.error('Fetch settlements error:', error);
-      alert('네트워크 오류가 발생했습니다.');
+      showError('네트워크 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
@@ -115,13 +117,13 @@ export default function AdminSettlementsPage() {
 
   const handleAddSettlement = async () => {
     if (!newSettlement.store_id || !newSettlement.amount) {
-      alert('가맹점과 정산 금액을 입력해주세요.');
+      showError('가맹점과 정산 금액을 입력해주세요.');
       return;
     }
 
     const amount = parseInt(newSettlement.amount, 10);
     if (isNaN(amount) || amount <= 0) {
-      alert('정산 금액은 0보다 큰 숫자여야 합니다.');
+      showError('정산 금액은 0보다 큰 숫자여야 합니다.');
       return;
     }
 
@@ -144,19 +146,19 @@ export default function AdminSettlementsPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        alert(result.message || '정산 입력에 실패했습니다.');
+        showError(result.message || '정산 입력에 실패했습니다.');
         return;
       }
 
       if (result.success) {
-        alert('정산이 입력되었습니다.');
+        showError('정산이 입력되었습니다.');
         setShowAddModal(false);
         setNewSettlement({ store_id: '', amount: '', note: '' });
         fetchData();
       }
     } catch (error) {
       console.error('Add settlement error:', error);
-      alert('네트워크 오류가 발생했습니다.');
+      showError('네트워크 오류가 발생했습니다.');
     }
   };
 

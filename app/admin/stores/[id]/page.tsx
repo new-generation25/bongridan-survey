@@ -6,6 +6,7 @@ import QRCode from 'qrcode';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Loading from '@/components/ui/Loading';
+import { useToast } from '@/components/ui/ToastProvider';
 import Input from '@/components/ui/Input';
 import { storage, formatCurrency, formatNumber } from '@/lib/utils';
 
@@ -23,6 +24,7 @@ interface StoreDetail {
 
 export default function AdminStoreDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
+  const { showError, showSuccess } = useToast();
   const [storeId, setStoreId] = useState('');
   const [store, setStore] = useState<StoreDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -68,7 +70,7 @@ export default function AdminStoreDetailPage({ params }: { params: Promise<{ id:
             router.push('/admin');
             return;
           }
-          alert(result.message || '가맹점 정보를 불러오는데 실패했습니다.');
+          showError(result.message || '가맹점 정보를 불러오는데 실패했습니다.');
           router.push('/admin/stores');
           return;
         }
@@ -84,7 +86,7 @@ export default function AdminStoreDetailPage({ params }: { params: Promise<{ id:
         }
       } catch (error) {
         console.error('Load store error:', error);
-        alert('네트워크 오류가 발생했습니다.');
+        showError('네트워크 오류가 발생했습니다.');
         router.push('/admin/stores');
       } finally {
         setLoading(false);
@@ -96,7 +98,7 @@ export default function AdminStoreDetailPage({ params }: { params: Promise<{ id:
 
   const handleSave = async () => {
     if (!editData.name.trim()) {
-      alert('가맹점명을 입력해주세요.');
+      showError('가맹점명을 입력해주세요.');
       return;
     }
 
@@ -116,19 +118,19 @@ export default function AdminStoreDetailPage({ params }: { params: Promise<{ id:
       const result = await response.json();
 
       if (!response.ok) {
-        alert(result.message || '가맹점 정보 수정에 실패했습니다.');
+        showError(result.message || '가맹점 정보 수정에 실패했습니다.');
         return;
       }
 
       if (result.success) {
-        alert('가맹점 정보가 수정되었습니다.');
+        showError('가맹점 정보가 수정되었습니다.');
         setEditMode(false);
         // 페이지 새로고침
         window.location.reload();
       }
     } catch (error) {
       console.error('Save store error:', error);
-      alert('네트워크 오류가 발생했습니다.');
+      showError('네트워크 오류가 발생했습니다.');
     } finally {
       setSaving(false);
     }
@@ -158,7 +160,7 @@ export default function AdminStoreDetailPage({ params }: { params: Promise<{ id:
       document.body.removeChild(link);
     } catch (error) {
       console.error('Generate QR error:', error);
-      alert('QR코드 생성에 실패했습니다.');
+      showError('QR코드 생성에 실패했습니다.');
     } finally {
       setGenerating(false);
     }

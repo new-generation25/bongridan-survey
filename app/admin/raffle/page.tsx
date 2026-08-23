@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Loading from '@/components/ui/Loading';
+import { useToast } from '@/components/ui/ToastProvider';
 import { storage, formatDate } from '@/lib/utils';
 
 interface RaffleEntry {
@@ -32,6 +33,7 @@ interface Winner {
 
 export default function AdminRafflePage() {
   const router = useRouter();
+  const { showError, showSuccess } = useToast();
   const [entries, setEntries] = useState<RaffleEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [drawing, setDrawing] = useState(false);
@@ -67,7 +69,7 @@ export default function AdminRafflePage() {
           router.push('/admin');
           return;
         }
-        alert(result.message || '추첨 데이터를 불러오는데 실패했습니다.');
+        showError(result.message || '추첨 데이터를 불러오는데 실패했습니다.');
         setLoading(false);
         return;
       }
@@ -80,7 +82,7 @@ export default function AdminRafflePage() {
       }
     } catch (error) {
       console.error('Fetch entries error:', error);
-      alert('네트워크 오류가 발생했습니다.');
+      showError('네트워크 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
@@ -88,12 +90,12 @@ export default function AdminRafflePage() {
 
   const handleDraw = async () => {
     if (eligibleCount < 5) {
-      alert('추첨 가능한 응답자가 부족합니다. (5명 이상 필요)');
+      showError('추첨 가능한 응답자가 부족합니다. (5명 이상 필요)');
       return;
     }
 
     if (totalCount < 7) {
-      alert(`추첨 응모자가 부족합니다. (현재: ${totalCount}명, 필요: 7명 이상)`);
+      showError(`추첨 응모자가 부족합니다. (현재: ${totalCount}명, 필요: 7명 이상)`);
       return;
     }
 
@@ -122,18 +124,18 @@ export default function AdminRafflePage() {
       const result = await response.json();
 
       if (!response.ok) {
-        alert(result.message || '추첨에 실패했습니다.');
+        showError(result.message || '추첨에 실패했습니다.');
         setDrawing(false);
         return;
       }
 
       if (result.success && result.winners) {
         setWinners(result.winners);
-        alert(`추첨이 완료되었습니다!\n\n당첨자 ${result.selected_count}명이 선정되었습니다.`);
+        showError(`추첨이 완료되었습니다!\n\n당첨자 ${result.selected_count}명이 선정되었습니다.`);
       }
     } catch (error) {
       console.error('Draw raffle error:', error);
-      alert('네트워크 오류가 발생했습니다.');
+      showError('네트워크 오류가 발생했습니다.');
     } finally {
       setDrawing(false);
     }

@@ -6,6 +6,7 @@ import { Html5Qrcode } from 'html5-qrcode';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Loading from '@/components/ui/Loading';
+import { useToast } from '@/components/ui/ToastProvider';
 import { COUPON_CONFIG } from '@/lib/constants';
 
 // 비디오 스트림에서 프레임을 캡처하여 File 객체로 변환하는 헬퍼 함수
@@ -33,6 +34,7 @@ const captureFrameAsFile = (videoElement: HTMLVideoElement): Promise<File> => {
 
 export default function StoreScanPage({ params }: { params: Promise<{ storeId: string }> }) {
   const router = useRouter();
+  const { showError, showSuccess } = useToast();
   const [storeName, setStoreName] = useState('');
   const [storeId, setStoreId] = useState('');
   const [scanning, setScanning] = useState(false);
@@ -98,7 +100,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
             // 스토어 정보 로드 후 통계 조회
             fetchStoreStats(storeIdValue);
           } else {
-            alert('존재하지 않는 가맹점입니다.');
+            showError('존재하지 않는 가맹점입니다.');
             router.push('/');
           }
         }
@@ -999,7 +1001,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
                     }).join('\n\n');
                     const fullText = `=== 디버그 로그 (${new Date().toLocaleString('ko-KR')}) ===\n\n${logText}\n\n=== 현재 상태 ===\n총 적립 금액: ${totalAmount}원\n스캔 카운트: ${scanCount}개\n에러 메시지: ${error || '(없음)'}\n스캔된 쿠폰: ${Array.from(scannedCouponsRef.current).join(', ')}`;
                     navigator.clipboard.writeText(fullText).then(() => {
-                      alert('디버그 로그가 클립보드에 복사되었습니다!');
+                      showSuccess('디버그 로그가 클립보드에 복사되었습니다!');
                     }).catch(() => {
                       // 클립보드 API 실패 시 fallback
                       const textArea = document.createElement('textarea');
@@ -1010,9 +1012,9 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
                       textArea.select();
                       try {
                         document.execCommand('copy');
-                        alert('디버그 로그가 클립보드에 복사되었습니다!');
+                        showSuccess('디버그 로그가 클립보드에 복사되었습니다!');
                       } catch (err) {
-                        alert('복사에 실패했습니다. 로그를 수동으로 복사해주세요.');
+                        showError('복사에 실패했습니다. 로그를 수동으로 복사해주세요.');
                       }
                       document.body.removeChild(textArea);
                     });
