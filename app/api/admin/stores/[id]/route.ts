@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
-import { ERROR_MESSAGES } from '@/lib/constants';
+import { db, COLLECTIONS } from '@/lib/firebase';
+import { ERROR_MESSAGES, COUPON_CONFIG } from '@/lib/constants';
 import { verifyAdminToken } from '@/lib/auth';
+
+// Node.js 런타임 사용
+export const runtime = 'nodejs';
 
 // GET: 가맹점 상세 정보 조회
 export async function GET(
@@ -20,42 +23,47 @@ export async function GET(
     const { id } = await params;
 
     // 가맹점 정보 조회
-    const { data: store, error: storeError } = await supabaseAdmin
-      .from('stores')
-      .select('*')
-      .eq('id', id)
-      .single();
+    const storeDoc = await db
+      .collection(COLLECTIONS.STORES)
+      .doc(id)
+      .get();
 
-    if (storeError || !store) {
+    if (!storeDoc.exists) {
       return NextResponse.json(
         { success: false, message: '가맹점을 찾을 수 없습니다.' },
         { status: 404 }
       );
     }
 
+    const store = storeDoc.data();
+
     // 통계 조회
-    const { count: totalUsed } = await supabaseAdmin
-      .from('coupons')
-      .select('*', { count: 'exact', head: true })
-      .eq('used_store_id', id)
-      .eq('status', 'used');
+    const usedCouponsSnap = await db
+      .collection(COLLECTIONS.COUPONS)
+      .where('used_store_id', '==', id)
+      .where('status', '==', 'used')
+      .get();
+    const totalUsed = usedCouponsSnap.size;
 
     // 정산 금액은 쿠폰 사용 건수 × 700원으로 계산
-    const totalAmount = (totalUsed || 0) * 700;
+    const totalAmount = totalUsed * COUPON_CONFIG.SETTLEMENT_RATE;
 
-    const { data: settlements } = await supabaseAdmin
-      .from('settlements')
-      .select('amount')
-      .eq('store_id', id);
-
-    const settledAmount = settlements?.reduce((sum, s) => sum + s.amount, 0) || 0;
+    const settlementsSnap = await db
+      .collection(COLLECTIONS.SETTLEMENTS)
+      .where('store_id', '==', id)
+      .get();
+    const settledAmount = settlementsSnap.docs.reduce(
+      (sum, doc) => sum + (doc.data().amount || 0), 0
+    );
     const unsettledAmount = totalAmount - settledAmount;
 
     return NextResponse.json({
       success: true,
       store: {
+        id: storeDoc.id,
         ...store,
-        total_used: totalUsed || 0,
+        created_at: store?.created_at?.toDate?.().toISOString() || store?.created_at,
+        total_used: totalUsed,
         total_amount: totalAmount,
         settled_amount: settledAmount,
         unsettled_amount: unsettledAmount,
@@ -87,24 +95,29 @@ export async function PUT(
     const { id } = await params;
     const { name, manager_name, manager_phone, is_active } = await request.json();
 
+    // 가맹점 존재 확인
+    const storeDoc = await db
+      .collection(COLLECTIONS.STORES)
+      .doc(id)
+      .get();
+
+    if (!storeDoc.exists) {
+      return NextResponse.json(
+        { success: false, message: '가맹점을 찾을 수 없습니다.' },
+        { status: 404 }
+      );
+    }
+
     const updateData: Record<string, unknown> = {};
     if (name !== undefined) updateData.name = name;
     if (manager_name !== undefined) updateData.manager_name = manager_name || null;
     if (manager_phone !== undefined) updateData.manager_phone = manager_phone || null;
     if (is_active !== undefined) updateData.is_active = is_active;
 
-    const { error } = await supabaseAdmin
-      .from('stores')
-      .update(updateData)
-      .eq('id', id);
-
-    if (error) {
-      console.error('Update store error:', error);
-      return NextResponse.json(
-        { success: false, message: ERROR_MESSAGES.INTERNAL_ERROR },
-        { status: 500 }
-      );
-    }
+    await db
+      .collection(COLLECTIONS.STORES)
+      .doc(id)
+      .update(updateData);
 
     return NextResponse.json({
       success: true,
@@ -117,4 +130,3 @@ export async function PUT(
     );
   }
 }
-

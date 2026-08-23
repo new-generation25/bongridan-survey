@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
-import { ERROR_MESSAGES } from '@/lib/constants';
+import { db, COLLECTIONS, Timestamp } from '@/lib/firebase';
+import { ERROR_MESSAGES, COUPON_CONFIG } from '@/lib/constants';
 import { verifyAdminToken } from '@/lib/auth';
-import { getKoreaTodayStartISO } from '@/lib/utils';
+
+// Node.js 런타임 사용
+export const runtime = 'nodejs';
 
 // GET: 가맹점 목록 조회 (통계 포함)
 export async function GET(request: NextRequest) {
@@ -16,44 +18,43 @@ export async function GET(request: NextRequest) {
     }
 
     // 가맹점 목록 조회 (가맹점 번호 순으로 정렬)
-    const { data: stores, error: storesError } = await supabaseAdmin
-      .from('stores')
-      .select('*')
-      .order('id');
-
-    if (storesError) {
-      console.error('Get stores error:', storesError);
-      return NextResponse.json(
-        { success: false, message: ERROR_MESSAGES.INTERNAL_ERROR },
-        { status: 500 }
-      );
-    }
+    const storesSnap = await db
+      .collection(COLLECTIONS.STORES)
+      .orderBy('__name__')
+      .get();
 
     // 각 가맹점별 통계 조회
     const storesWithStats = await Promise.all(
-      (stores || []).map(async (store) => {
+      storesSnap.docs.map(async (storeDoc) => {
+        const store = storeDoc.data();
+        const storeId = storeDoc.id;
+
         // 전체 사용 통계
-        const { count: totalUsed } = await supabaseAdmin
-          .from('coupons')
-          .select('*', { count: 'exact', head: true })
-          .eq('used_store_id', store.id)
-          .eq('status', 'used');
+        const usedCouponsSnap = await db
+          .collection(COLLECTIONS.COUPONS)
+          .where('used_store_id', '==', storeId)
+          .where('status', '==', 'used')
+          .get();
+        const totalUsed = usedCouponsSnap.size;
 
         // 정산 금액은 쿠폰 사용 건수 × 700원으로 계산
-        const totalAmount = (totalUsed || 0) * 700;
+        const totalAmount = totalUsed * COUPON_CONFIG.SETTLEMENT_RATE;
 
         // 정산된 금액 (settlements 테이블에서 합계)
-        const { data: settlements } = await supabaseAdmin
-          .from('settlements')
-          .select('amount')
-          .eq('store_id', store.id);
-
-        const settledAmount = settlements?.reduce((sum, s) => sum + s.amount, 0) || 0;
+        const settlementsSnap = await db
+          .collection(COLLECTIONS.SETTLEMENTS)
+          .where('store_id', '==', storeId)
+          .get();
+        const settledAmount = settlementsSnap.docs.reduce(
+          (sum, doc) => sum + (doc.data().amount || 0), 0
+        );
         const unsettledAmount = totalAmount - settledAmount;
 
         return {
+          id: storeId,
           ...store,
-          total_used: totalUsed || 0,
+          created_at: store.created_at?.toDate?.().toISOString() || store.created_at,
+          total_used: totalUsed,
           total_amount: totalAmount,
           settled_amount: settledAmount,
           unsettled_amount: unsettledAmount,
@@ -95,42 +96,37 @@ export async function POST(request: NextRequest) {
     }
 
     // 다음 ID 생성 (기존 가맹점 중 가장 큰 ID 찾기)
-    const { data: existingStores } = await supabaseAdmin
-      .from('stores')
-      .select('id')
-      .order('id', { ascending: false })
-      .limit(1);
+    const existingStoresSnap = await db
+      .collection(COLLECTIONS.STORES)
+      .orderBy('__name__', 'desc')
+      .limit(1)
+      .get();
 
     let nextId = '01';
-    if (existingStores && existingStores.length > 0) {
-      const lastId = parseInt(existingStores[0].id, 10);
+    if (!existingStoresSnap.empty) {
+      const lastId = parseInt(existingStoresSnap.docs[0].id, 10);
       nextId = String(lastId + 1).padStart(2, '0');
     }
 
     // 가맹점 추가
-    const { data: newStore, error } = await supabaseAdmin
-      .from('stores')
-      .insert({
-        id: nextId,
-        name,
-        manager_name: manager_name || null,
-        manager_phone: manager_phone || null,
-        is_active: true,
-      })
-      .select()
-      .single();
+    const newStoreData = {
+      name,
+      manager_name: manager_name || null,
+      manager_phone: manager_phone || null,
+      is_active: true,
+      total_settled: 0,
+      created_at: Timestamp.now(),
+    };
 
-    if (error) {
-      console.error('Create store error:', error);
-      return NextResponse.json(
-        { success: false, message: ERROR_MESSAGES.INTERNAL_ERROR },
-        { status: 500 }
-      );
-    }
+    await db.collection(COLLECTIONS.STORES).doc(nextId).set(newStoreData);
 
     return NextResponse.json({
       success: true,
-      store: newStore,
+      store: {
+        id: nextId,
+        ...newStoreData,
+        created_at: newStoreData.created_at.toDate().toISOString(),
+      },
     });
   } catch (error) {
     console.error('Create store error:', error);
@@ -140,4 +136,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

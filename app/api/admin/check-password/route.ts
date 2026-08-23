@@ -1,24 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
+import { db, COLLECTIONS } from '@/lib/firebase';
+
+// Node.js 런타임 사용
+export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
   try {
     // 설정에서 관리자 비밀번호 가져오기
-    const { data: setting, error } = await supabaseAdmin
-      .from('settings')
-      .select('value')
-      .eq('key', 'admin_password')
-      .single();
+    const settingDoc = await db
+      .collection(COLLECTIONS.SETTINGS)
+      .doc('admin_password')
+      .get();
 
-    if (error || !setting) {
-      console.error('Get admin password error:', error);
+    if (!settingDoc.exists) {
+      console.error('Admin password setting not found');
       return NextResponse.json(
         { success: false, message: '비밀번호를 가져올 수 없습니다.' },
         { status: 500 }
       );
     }
 
-    const isDefaultPassword = setting.value === 'change_this_password_in_production';
+    const setting = settingDoc.data();
+    const isDefaultPassword = setting?.value === 'change_this_password_in_production';
 
     return NextResponse.json({
       success: true,
@@ -35,6 +38,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-
-
-
