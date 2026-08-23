@@ -62,10 +62,20 @@ export async function GET(
     // 상태 필터 (별도 쿼리 필요 - Firestore 제한)
     const couponsSnapshot = await query.get();
 
-    let coupons = couponsSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    let coupons = couponsSnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        code: data.code as string,
+        status: data.status as string,
+        amount: data.amount as number,
+        survey_id: data.survey_id as string,
+        issued_at: data.issued_at,
+        expires_at: data.expires_at,
+        used_at: data.used_at,
+        used_store_id: data.used_store_id as string | undefined,
+      };
+    });
 
     // 상태 필터 (클라이언트 사이드)
     if (status !== 'all') {
