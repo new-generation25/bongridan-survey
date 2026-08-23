@@ -32,7 +32,33 @@ curl -X POST https://bongridan-survey.vercel.app/api/survey/step1 \
 
 ### API 키 발급
 
-API 키는 관리자에게 요청하여 발급받습니다. 발급된 키는 환경 변수 `PARTNER_API_KEYS`에 등록됩니다.
+관리자 대시보드에서 API 키를 발급받습니다.
+
+**발급 API:**
+```http
+POST /api/admin/api-keys
+Authorization: Bearer {관리자_JWT_토큰}
+Content-Type: application/json
+
+{
+  "partner_name": "봉황메모리즈",
+  "partner_contact": "contact@bonghwang.com",
+  "permissions": ["survey", "coupon"],
+  "rate_limit": 1000,
+  "expires_in_days": 365
+}
+```
+
+**응답:**
+```json
+{
+  "success": true,
+  "api_key": "brg_aBcDeFgHiJkLmNoPqRsTuVwXyZ123456",
+  "message": "이 키는 다시 확인할 수 없으니 안전하게 보관하세요."
+}
+```
+
+> ⚠️ **중요**: API 키는 발급 시 한 번만 표시됩니다. 분실 시 새로 발급받아야 합니다.
 
 ---
 
