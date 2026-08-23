@@ -45,11 +45,11 @@ const SETTINGS = [
 /**
  * 초기 데이터 시드 API
  *
- * POST /api/admin/seed?secret=YOUR_SEED_SECRET
+ * GET/POST /api/admin/seed?secret=YOUR_SEED_SECRET
  *
  * ⚠️ 한 번만 실행! 배포 후 이 파일 삭제 권장
  */
-export async function POST(request: NextRequest) {
+async function seedDatabase(request: NextRequest) {
   try {
     // 시크릿 키 확인 (간단한 보안)
     const secret = request.nextUrl.searchParams.get('secret');
@@ -117,4 +117,13 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+// GET과 POST 둘 다 지원 (브라우저에서 쉽게 접근)
+export async function GET(request: NextRequest) {
+  return seedDatabase(request);
+}
+
+export async function POST(request: NextRequest) {
+  return seedDatabase(request);
 }
