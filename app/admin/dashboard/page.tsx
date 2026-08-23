@@ -6,11 +6,13 @@ import Link from 'next/link';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Loading from '@/components/ui/Loading';
+import { useToast } from '@/components/ui/ToastProvider';
 import { storage, formatCurrency, formatNumber, formatPercent } from '@/lib/utils';
 import type { DashboardData } from '@/lib/types';
 
 export default function AdminDashboardPage() {
   const router = useRouter();
+  const { showError, showSuccess } = useToast();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -40,7 +42,7 @@ export default function AdminDashboardPage() {
           }
           // 500 오류 등 다른 오류 처리
           const errorMessage = result.message || result.error || '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
-          alert(errorMessage);
+          showError(errorMessage);
           setLoading(false);
           return;
         }
@@ -49,11 +51,11 @@ export default function AdminDashboardPage() {
           setData(result.data);
         } else {
           const errorMessage = result.message || '데이터를 불러오는데 실패했습니다.';
-          alert(errorMessage);
+          showError(errorMessage);
         }
       } catch (error) {
         console.error('Fetch dashboard error:', error);
-        alert('네트워크 오류가 발생했습니다.');
+        showError('네트워크 오류가 발생했습니다.');
       } finally {
         setLoading(false);
       }

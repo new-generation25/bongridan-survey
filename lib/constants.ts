@@ -137,12 +137,29 @@ export const ERROR_MESSAGES = {
   NETWORK_ERROR: '연결이 불안정합니다. 다시 시도해주세요',
   INTERNAL_ERROR: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요',
   INVALID_REQUEST: '잘못된 요청입니다',
-  UNAUTHORIZED: '권한이 없습니다'
+  UNAUTHORIZED: '권한이 없습니다',
+  INVALID_API_KEY: 'Invalid or missing API key',
+  INVALID_DEVICE_ID: 'Invalid device ID',
+} as const;
+
+// API 에러 코드 (파트너 연동용)
+export const API_ERROR_CODES = {
+  UNAUTHORIZED: 'UNAUTHORIZED',
+  INVALID_API_KEY: 'INVALID_API_KEY',
+  INVALID_DEVICE_ID: 'INVALID_DEVICE_ID',
+  INVALID_REQUEST: 'INVALID_REQUEST',
+  DUPLICATE_RESPONSE: 'DUPLICATE_RESPONSE',
+  COUPON_NOT_FOUND: 'COUPON_NOT_FOUND',
+  COUPON_EXPIRED: 'COUPON_EXPIRED',
+  COUPON_USED: 'COUPON_USED',
+  STORE_NOT_FOUND: 'STORE_NOT_FOUND',
+  INTERNAL_ERROR: 'INTERNAL_ERROR',
 } as const;
 
 // 쿠폰 설정
 export const COUPON_CONFIG = {
   AMOUNT: parseInt(process.env.NEXT_PUBLIC_COUPON_AMOUNT || '500'),
-  VALIDITY_HOURS: parseInt(process.env.NEXT_PUBLIC_COUPON_VALIDITY_HOURS || '24')
+  VALIDITY_HOURS: parseInt(process.env.NEXT_PUBLIC_COUPON_VALIDITY_HOURS || '24'),
+  SETTLEMENT_RATE: parseInt(process.env.SETTLEMENT_RATE || '700') // 가맹점 정산 단가
 } as const;
 

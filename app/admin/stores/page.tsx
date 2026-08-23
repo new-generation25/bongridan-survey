@@ -7,6 +7,7 @@ import QRCode from 'qrcode';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Loading from '@/components/ui/Loading';
+import { useToast } from '@/components/ui/ToastProvider';
 import { storage, formatCurrency, formatNumber } from '@/lib/utils';
 
 interface StoreWithStats {
@@ -23,6 +24,7 @@ interface StoreWithStats {
 
 export default function AdminStoresPage() {
   const router = useRouter();
+  const { showError, showSuccess } = useToast();
   const [stores, setStores] = useState<StoreWithStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -83,7 +85,7 @@ export default function AdminStoresPage() {
           router.push('/admin');
           return;
         }
-        alert(result.message || '가맹점 목록을 불러오는데 실패했습니다.');
+        showError(result.message || '가맹점 목록을 불러오는데 실패했습니다.');
         setLoading(false);
         return;
       }
@@ -93,7 +95,7 @@ export default function AdminStoresPage() {
       }
     } catch (error) {
       console.error('Fetch stores error:', error);
-      alert('네트워크 오류가 발생했습니다.');
+      showError('네트워크 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
@@ -101,7 +103,7 @@ export default function AdminStoresPage() {
 
   const handleAddStore = async () => {
     if (!newStore.name.trim()) {
-      alert('가맹점명을 입력해주세요.');
+      showError('가맹점명을 입력해주세요.');
       return;
     }
 
@@ -124,19 +126,19 @@ export default function AdminStoresPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        alert(result.message || '가맹점 추가에 실패했습니다.');
+        showError(result.message || '가맹점 추가에 실패했습니다.');
         return;
       }
 
       if (result.success) {
-        alert('가맹점이 추가되었습니다.');
+        showError('가맹점이 추가되었습니다.');
         setShowAddModal(false);
         setNewStore({ name: '', manager_name: '', manager_phone: '' });
         fetchStores();
       }
     } catch (error) {
       console.error('Add store error:', error);
-      alert('네트워크 오류가 발생했습니다.');
+      showError('네트워크 오류가 발생했습니다.');
     }
   };
 
@@ -164,7 +166,7 @@ export default function AdminStoresPage() {
       document.body.removeChild(link);
     } catch (error) {
       console.error('Generate QR error:', error);
-      alert('QR코드 생성에 실패했습니다.');
+      showError('QR코드 생성에 실패했습니다.');
     } finally {
       setGeneratingQR(null);
     }
@@ -193,7 +195,7 @@ export default function AdminStoresPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        alert(result.message || '상태 변경에 실패했습니다.');
+        showError(result.message || '상태 변경에 실패했습니다.');
         return;
       }
 
@@ -203,7 +205,7 @@ export default function AdminStoresPage() {
       }
     } catch (error) {
       console.error('Toggle status error:', error);
-      alert('네트워크 오류가 발생했습니다.');
+      showError('네트워크 오류가 발생했습니다.');
     } finally {
       setUpdatingStatus(null);
     }

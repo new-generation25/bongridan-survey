@@ -1,22 +1,22 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
+import { db, COLLECTIONS } from '@/lib/firebase';
 import { ERROR_MESSAGES } from '@/lib/constants';
+
+// Node.js 런타임 사용
+export const runtime = 'nodejs';
 
 export async function GET() {
   try {
-    const { data: stores, error } = await supabaseAdmin
-      .from('stores')
-      .select('id, name, is_active')
-      .eq('is_active', true)
-      .order('name');
+    const snapshot = await db
+      .collection(COLLECTIONS.STORES)
+      .where('is_active', '==', true)
+      .orderBy('name')
+      .get();
 
-    if (error) {
-      console.error('Get stores error:', error);
-      return NextResponse.json(
-        { success: false, message: ERROR_MESSAGES.INTERNAL_ERROR },
-        { status: 500 }
-      );
-    }
+    const stores = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
 
     return NextResponse.json({
       success: true,
@@ -30,4 +30,3 @@ export async function GET() {
     );
   }
 }
-

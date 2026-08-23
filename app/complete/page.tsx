@@ -5,10 +5,12 @@ import { useRouter } from 'next/navigation';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Loading from '@/components/ui/Loading';
+import { useToast } from '@/components/ui/ToastProvider';
 import { storage } from '@/lib/utils';
 
 export default function CompletePage() {
   const router = useRouter();
+  const { showError } = useToast();
   const [loading, setLoading] = useState(true);
   const [couponId, setCouponId] = useState<string | null>(null);
 
@@ -87,7 +89,7 @@ export default function CompletePage() {
                   if (couponId) {
                     router.push(`/coupon/${couponId}`);
                   } else {
-                    alert('쿠폰 정보를 찾을 수 없습니다.');
+                    showError('쿠폰 정보를 찾을 수 없습니다.');
                     router.push('/');
                   }
                 }}

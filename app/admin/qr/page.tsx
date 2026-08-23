@@ -6,10 +6,12 @@ import QRCode from 'qrcode';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Loading from '@/components/ui/Loading';
+import { useToast } from '@/components/ui/ToastProvider';
 import { storage } from '@/lib/utils';
 
 export default function AdminQRPage() {
   const router = useRouter();
+  const { showError, showSuccess } = useToast();
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [baseUrl, setBaseUrl] = useState('');
@@ -54,7 +56,7 @@ export default function AdminQRPage() {
       downloadQRCode(qrDataUrl, '설문조사_QR코드.png');
     } catch (error) {
       console.error('Generate QR error:', error);
-      alert('QR코드 생성에 실패했습니다.');
+      showError('QR코드 생성에 실패했습니다.');
     } finally {
       setGenerating(false);
     }

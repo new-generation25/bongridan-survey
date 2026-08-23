@@ -6,11 +6,13 @@ import QRCode from 'qrcode';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Loading from '@/components/ui/Loading';
+import { useToast } from '@/components/ui/ToastProvider';
 import { formatCurrency, formatDate, storage, getKoreaTime } from '@/lib/utils';
 import type { Coupon } from '@/lib/types';
 
 export default function CouponPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
+  const { showError } = useToast();
   const [coupon, setCoupon] = useState<Coupon | null>(null);
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [loading, setLoading] = useState(true);
@@ -39,12 +41,12 @@ export default function CouponPage({ params }: { params: Promise<{ id: string }>
           // 쿠폰 ID 저장
           storage.set('last_coupon_id', resolvedParams.id);
         } else {
-          alert('쿠폰을 찾을 수 없습니다.');
+          showError('쿠폰을 찾을 수 없습니다.');
           router.push('/');
         }
       } catch (error) {
         console.error('Fetch coupon error:', error);
-        alert('쿠폰을 불러오는 중 오류가 발생했습니다.');
+        showError('쿠폰을 불러오는 중 오류가 발생했습니다.');
         router.push('/');
       } finally {
         setLoading(false);
@@ -94,29 +96,30 @@ export default function CouponPage({ params }: { params: Promise<{ id: string }>
               </p>
             </div>
 
-            {/* QR 코드 */}
-            <div className="space-y-3">
-              <div className="bg-white p-6 rounded-xl inline-block">
-                {qrCodeUrl && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={qrCodeUrl} alt="QR Code" className="w-64 h-64" />
-                )}
+            {/* QR 코드 (유효한 경우에만 표시) */}
+            {!isUsed && !isExpired && (
+              <div className="space-y-3">
+                <div className="bg-white p-6 rounded-xl inline-block">
+                  {qrCodeUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={qrCodeUrl} alt="QR Code" className="w-64 h-64" />
+                  )}
+                </div>
+                <p className="text-sm text-textSecondary">
+                  가맹점에서 이 QR 코드를 보여주세요
+                </p>
               </div>
-              <p className="text-sm text-textSecondary">
-                가맹점에서 이 QR 코드를 보여주세요
-              </p>
-            </div>
+            )}
 
-            {/* 쿠폰 코드 */}
-            <div className="space-y-2">
-              <p className="text-sm text-textSecondary">숫자 코드</p>
-              <p className="text-3xl font-mono font-bold text-textPrimary tracking-wider">
-                {coupon.code}
-              </p>
-              <p className="text-xs text-textSecondary">
-                
-              </p>
-            </div>
+            {/* 쿠폰 코드 (유효한 경우에만 표시) */}
+            {!isUsed && !isExpired && (
+              <div className="space-y-2">
+                <p className="text-sm text-textSecondary">숫자 코드</p>
+                <p className="text-3xl font-mono font-bold text-textPrimary tracking-wider">
+                  {coupon.code}
+                </p>
+              </div>
+            )}
 
             {/* 상태 표시 */}
             {isUsed && (

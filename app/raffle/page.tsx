@@ -6,10 +6,12 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Loading from '@/components/ui/Loading';
+import { useToast } from '@/components/ui/ToastProvider';
 import { storage } from '@/lib/utils';
 
 export default function RafflePage() {
   const router = useRouter();
+  const { showError, showSuccess } = useToast();
   const [loading, setLoading] = useState(false);
   const [phoneError, setPhoneError] = useState('');
   const [formData, setFormData] = useState({
@@ -50,17 +52,17 @@ export default function RafflePage() {
     e.preventDefault();
 
     if (!formData.name || !formData.phone) {
-      alert('이름과 전화번호를 입력해주세요.');
+      showError('이름과 전화번호를 입력해주세요.');
       return;
     }
 
     if (!validatePhone(formData.phone)) {
-      alert('올바른 휴대폰 번호를 입력해주세요.');
+      showError('올바른 휴대폰 번호를 입력해주세요.');
       return;
     }
 
     if (!formData.agreed_privacy) {
-      alert('개인정보 수집에 동의해주세요.');
+      showError('개인정보 수집에 동의해주세요.');
       return;
     }
 
@@ -70,7 +72,7 @@ export default function RafflePage() {
       const surveyId = storage.get<string>('survey_id');
 
       if (!surveyId) {
-        alert('설문 정보를 찾을 수 없습니다.');
+        showError('설문 정보를 찾을 수 없습니다.');
         router.push('/');
         return;
       }
@@ -87,7 +89,7 @@ export default function RafflePage() {
       const data = await response.json();
 
       if (!response.ok) {
-        alert(data.message || '오류가 발생했습니다.');
+        showError(data.message || '오류가 발생했습니다.');
         setLoading(false);
         return;
       }
@@ -95,7 +97,7 @@ export default function RafflePage() {
       router.push('/complete');
     } catch (error) {
       console.error('Submit error:', error);
-      alert('네트워크 오류가 발생했습니다.');
+      showError('네트워크 오류가 발생했습니다.');
       setLoading(false);
     }
   };

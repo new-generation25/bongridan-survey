@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
+import { db, COLLECTIONS } from '@/lib/firebase';
 import { ERROR_MESSAGES } from '@/lib/constants';
+
+// Node.js 런타임 사용
+export const runtime = 'nodejs';
 
 export async function GET(
   request: NextRequest,
@@ -9,50 +12,59 @@ export async function GET(
   try {
     const { id } = await params;
 
-    const { data: coupon, error } = await supabaseAdmin
-      .from('coupons')
-      .select('*')
-      .eq('id', id)
-      .maybeSingle();
+    // 쿠폰 조회
+    const couponDoc = await db
+      .collection(COLLECTIONS.COUPONS)
+      .doc(id)
+      .get();
 
-    if (error || !coupon) {
-      console.error('Get coupon error:', error);
+    if (!couponDoc.exists) {
       return NextResponse.json(
         { success: false, message: ERROR_MESSAGES.COUPON_NOT_FOUND },
         { status: 404 }
       );
     }
 
+    const coupon = { id: couponDoc.id, ...couponDoc.data() };
+
     // 설문 완료 상태 및 경품 응모 여부 확인
     let surveyStageCompleted = 1;
     let raffleEntered = false;
 
     if (coupon.survey_id) {
-      const { data: survey } = await supabaseAdmin
-        .from('surveys')
-        .select('stage_completed')
-        .eq('id', coupon.survey_id)
-        .maybeSingle();
+      // 설문 조회
+      const surveyDoc = await db
+        .collection(COLLECTIONS.SURVEYS)
+        .doc(coupon.survey_id as string)
+        .get();
 
-      surveyStageCompleted = survey?.stage_completed || 1;
+      if (surveyDoc.exists) {
+        surveyStageCompleted = surveyDoc.data()?.stage_completed || 1;
+      }
 
       // 경품 응모 여부 확인
-      const { data: raffleEntry } = await supabaseAdmin
-        .from('raffle_entries')
-        .select('id')
-        .eq('survey_id', coupon.survey_id)
-        .maybeSingle();
+      const raffleSnapshot = await db
+        .collection(COLLECTIONS.RAFFLE_ENTRIES)
+        .where('survey_id', '==', coupon.survey_id)
+        .limit(1)
+        .get();
 
-      raffleEntered = !!raffleEntry;
+      raffleEntered = !raffleSnapshot.empty;
     }
+
+    // Timestamp를 Date로 변환
+    const responseData = {
+      ...coupon,
+      survey_stage_completed: surveyStageCompleted,
+      raffle_entered: raffleEntered,
+      issued_at: coupon.issued_at?.toDate?.() || coupon.issued_at,
+      expires_at: coupon.expires_at?.toDate?.() || coupon.expires_at,
+      used_at: coupon.used_at?.toDate?.() || coupon.used_at,
+    };
 
     return NextResponse.json({
       success: true,
-      coupon: {
-        ...coupon,
-        survey_stage_completed: surveyStageCompleted,
-        raffle_entered: raffleEntered,
-      },
+      coupon: responseData,
     });
   } catch (error) {
     console.error('Get coupon error:', error);
@@ -62,4 +74,3 @@ export async function GET(
     );
   }
 }
-

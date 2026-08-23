@@ -6,6 +6,8 @@ import { Html5Qrcode } from 'html5-qrcode';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Loading from '@/components/ui/Loading';
+import { useToast } from '@/components/ui/ToastProvider';
+import { COUPON_CONFIG } from '@/lib/constants';
 
 // 비디오 스트림에서 프레임을 캡처하여 File 객체로 변환하는 헬퍼 함수
 const captureFrameAsFile = (videoElement: HTMLVideoElement): Promise<File> => {
@@ -32,6 +34,7 @@ const captureFrameAsFile = (videoElement: HTMLVideoElement): Promise<File> => {
 
 export default function StoreScanPage({ params }: { params: Promise<{ storeId: string }> }) {
   const router = useRouter();
+  const { showError, showSuccess } = useToast();
   const [storeName, setStoreName] = useState('');
   const [storeId, setStoreId] = useState('');
   const [scanning, setScanning] = useState(false);
@@ -97,7 +100,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
             // 스토어 정보 로드 후 통계 조회
             fetchStoreStats(storeIdValue);
           } else {
-            alert('존재하지 않는 가맹점입니다.');
+            showError('존재하지 않는 가맹점입니다.');
             router.push('/');
           }
         }
@@ -271,7 +274,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
 
       // 누적 금액 업데이트 (카메라 유지)
       // API의 total_amount는 단일 쿠폰 금액이므로 500원 사용
-      const addedAmount = 500;
+      const addedAmount = COUPON_CONFIG.AMOUNT;
       
       // 카메라 일시 정지 (검정 화면 표시)
       setCameraPaused(true);
@@ -337,15 +340,9 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
   }, [storeId, fetchStoreStats, error, addDebugLog]);
 
   const handleCouponValidationById = useCallback(async (couponId: string) => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/aeb5e0c2-08cc-4290-a930-f974f5271152',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:369',message:'handleCouponValidationById entry',data:{couponId,isScanned:scannedCouponsRef.current.has(couponId),isProcessing:processingCouponsRef.current.has(couponId),scannedSetSize:scannedCouponsRef.current.size,processingSetSize:processingCouponsRef.current.size},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     
     // 중복 스캔 체크 (이미 처리 완료된 쿠폰)
     if (scannedCouponsRef.current.has(couponId)) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/aeb5e0c2-08cc-4290-a930-f974f5271152',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:373',message:'Duplicate scan detected (already scanned)',data:{couponId,scannedSetSize:scannedCouponsRef.current.size},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
       if (isMountedRef.current) {
         setError('이미 적립된 쿠폰입니다.');
         // 에러 메시지 자동 제거 (3초 후)
@@ -363,18 +360,12 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
 
     // 처리 중인 쿠폰 체크 (동시 요청 차단)
     if (processingCouponsRef.current.has(couponId)) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/aeb5e0c2-08cc-4290-a930-f974f5271152',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:385',message:'Duplicate scan detected (already processing)',data:{couponId,processingSetSize:processingCouponsRef.current.size,processingCoupons:Array.from(processingCouponsRef.current)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
       // 이미 처리 중인 쿠폰이므로 무시 (에러 메시지 표시하지 않음)
       return false;
     }
 
     // 처리 시작: 처리 중인 쿠폰 목록에 추가 (동시 요청 차단)
     processingCouponsRef.current.add(couponId);
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/aeb5e0c2-08cc-4290-a930-f974f5271152',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:392',message:'Added to processing set',data:{couponId,processingSetSize:processingCouponsRef.current.size},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
 
     setIsProcessing(true);
     // 이전 에러 메시지와 타임아웃 정리
@@ -385,9 +376,6 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
     setError(''); // 처리 시작 시 에러 메시지 제거
 
     try {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/aeb5e0c2-08cc-4290-a930-f974f5271152',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:412',message:'Starting coupon validation process',data:{couponId,processingSetSize:processingCouponsRef.current.size},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
       // 먼저 쿠폰 정보 조회 (상점용 파라미터 추가)
       const validateResponse = await fetch(`/api/coupon/validate?id=${couponId}&store=${storeId}`);
       
@@ -412,9 +400,6 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
           errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
           setIsProcessing(false);
           processingCouponsRef.current.delete(couponId); // 처리 중인 쿠폰 제거
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/aeb5e0c2-08cc-4290-a930-f974f5271152',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:437',message:'Removed from processing set (HTML response)',data:{couponId,processingSetSize:processingCouponsRef.current.size},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-          // #endregion
           // 카메라는 유지 (setScanning 호출하지 않음)
           return false;
         }
@@ -430,9 +415,6 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
         setIsProcessing(false);
         processingCouponsRef.current.delete(couponId); // 처리 중인 쿠폰 제거
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/aeb5e0c2-08cc-4290-a930-f974f5271152',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:451',message:'Removed from processing set (parse error)',data:{couponId,processingSetSize:processingCouponsRef.current.size},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
         // 카메라는 유지 (setScanning 호출하지 않음)
         return false;
       }
@@ -452,9 +434,6 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
         setIsProcessing(false);
         processingCouponsRef.current.delete(couponId); // 처리 중인 쿠폰 제거
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/aeb5e0c2-08cc-4290-a930-f974f5271152',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:469',message:'Removed from processing set (validate failed)',data:{couponId,processingSetSize:processingCouponsRef.current.size},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
         // 카메라는 유지 (setScanning 호출하지 않음)
         return false;
       }
@@ -516,9 +495,6 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
           errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
           setIsProcessing(false);
           processingCouponsRef.current.delete(couponId); // 처리 중인 쿠폰 제거
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/aeb5e0c2-08cc-4290-a930-f974f5271152',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:529',message:'Removed from processing set (HTML response use)',data:{couponId,processingSetSize:processingCouponsRef.current.size},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-          // #endregion
           // 카메라는 유지 (setScanning 호출하지 않음)
           return false;
         }
@@ -535,9 +511,6 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
         setIsProcessing(false);
         processingCouponsRef.current.delete(couponId); // 처리 중인 쿠폰 제거
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/aeb5e0c2-08cc-4290-a930-f974f5271152',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:544',message:'Removed from processing set (parse error use)',data:{couponId,processingSetSize:processingCouponsRef.current.size},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
         // 카메라는 유지 (setScanning 호출하지 않음)
         return false;
       }
@@ -553,9 +526,6 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         
         // 성공 시 스캔된 쿠폰에 추가 (중복 방지)
         scannedCouponsRef.current.add(couponId);
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/aeb5e0c2-08cc-4290-a930-f974f5271152',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:557',message:'Coupon use success',data:{couponId,scannedSetSize:scannedCouponsRef.current.size},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
       } else {
         // 실패 응답 처리
         const errorMessage = data?.message || '쿠폰 사용에 실패했습니다.';
@@ -590,9 +560,6 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
         }
         setIsProcessing(false);
         processingCouponsRef.current.delete(couponId); // 처리 중인 쿠폰 제거
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/aeb5e0c2-08cc-4290-a930-f974f5271152',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:592',message:'Removed from processing set (use failed)',data:{couponId,processingSetSize:processingCouponsRef.current.size},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
         // 카메라는 유지 (setScanning 호출하지 않음)
         return false;
       }
@@ -608,7 +575,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
 
       // 누적 금액 업데이트 (카메라 유지)
       // API의 total_amount는 단일 쿠폰 금액이므로 500원 사용
-      const addedAmount = 500;
+      const addedAmount = COUPON_CONFIG.AMOUNT;
       
       // 누적 금액 업데이트 (함수형 업데이트로 최신 값 사용)
       setTotalAmount((prev) => prev + addedAmount);
@@ -628,9 +595,6 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       
       setIsProcessing(false);
       processingCouponsRef.current.delete(couponId); // 처리 중인 쿠폰 제거 (성공)
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/aeb5e0c2-08cc-4290-a930-f974f5271152',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:641',message:'Removed from processing set (success)',data:{couponId,processingSetSize:processingCouponsRef.current.size},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
       return true;
     } catch (error) {
       console.error('Coupon validation error:', error);
@@ -648,9 +612,6 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
       errorTimeoutRef.current = setTimeout(() => setError(''), 3000);
       setIsProcessing(false);
       processingCouponsRef.current.delete(couponId); // 처리 중인 쿠폰 제거 (에러)
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/aeb5e0c2-08cc-4290-a930-f974f5271152',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:658',message:'Removed from processing set (exception)',data:{couponId,processingSetSize:processingCouponsRef.current.size,error:error instanceof Error ? error.message : String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
       // 카메라는 유지 (setScanning 호출하지 않음)
       return false;
     }
@@ -1040,7 +1001,7 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
                     }).join('\n\n');
                     const fullText = `=== 디버그 로그 (${new Date().toLocaleString('ko-KR')}) ===\n\n${logText}\n\n=== 현재 상태 ===\n총 적립 금액: ${totalAmount}원\n스캔 카운트: ${scanCount}개\n에러 메시지: ${error || '(없음)'}\n스캔된 쿠폰: ${Array.from(scannedCouponsRef.current).join(', ')}`;
                     navigator.clipboard.writeText(fullText).then(() => {
-                      alert('디버그 로그가 클립보드에 복사되었습니다!');
+                      showSuccess('디버그 로그가 클립보드에 복사되었습니다!');
                     }).catch(() => {
                       // 클립보드 API 실패 시 fallback
                       const textArea = document.createElement('textarea');
@@ -1051,9 +1012,9 @@ export default function StoreScanPage({ params }: { params: Promise<{ storeId: s
                       textArea.select();
                       try {
                         document.execCommand('copy');
-                        alert('디버그 로그가 클립보드에 복사되었습니다!');
+                        showSuccess('디버그 로그가 클립보드에 복사되었습니다!');
                       } catch (err) {
-                        alert('복사에 실패했습니다. 로그를 수동으로 복사해주세요.');
+                        showError('복사에 실패했습니다. 로그를 수동으로 복사해주세요.');
                       }
                       document.body.removeChild(textArea);
                     });

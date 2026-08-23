@@ -8,11 +8,13 @@ import RadioGroup from '@/components/ui/RadioGroup';
 import CheckboxGroup from '@/components/ui/CheckboxGroup';
 import ProgressBar from '@/components/ui/ProgressBar';
 import Loading from '@/components/ui/Loading';
-import { storage } from '@/lib/utils';
+import { useToast } from '@/components/ui/ToastProvider';
+import { storage, getDeviceId } from '@/lib/utils';
 import { FREQUENCIES, DURATIONS, SATISFACTIONS, IMPROVEMENTS, OTHER_SPOTS } from '@/lib/constants';
 
 export default function SurveyStep2Page() {
   const router = useRouter();
+  const { showError } = useToast();
   const [loading, setLoading] = useState(false);
   const [startTime] = useState(Date.now());
   const [formData, setFormData] = useState({
@@ -28,7 +30,7 @@ export default function SurveyStep2Page() {
 
     if (!formData.q8_frequency || !formData.q9_duration || !formData.q10_satisfaction ||
         formData.q11_improvement.length === 0 || formData.q12_other_spots.length === 0) {
-      alert('모든 필수 항목을 입력해주세요.');
+      showError('모든 필수 항목을 입력해주세요.');
       return;
     }
 
@@ -38,7 +40,7 @@ export default function SurveyStep2Page() {
       const surveyId = storage.get<string>('survey_id');
       
       if (!surveyId) {
-        alert('설문 정보를 찾을 수 없습니다. 1단계부터 다시 시작해주세요.');
+        showError('설문 정보를 찾을 수 없습니다. 1단계부터 다시 시작해주세요.');
         router.push('/survey/step1');
         return;
       }
@@ -50,6 +52,7 @@ export default function SurveyStep2Page() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           survey_id: surveyId,
+          device_id: getDeviceId(),
           ...formData,
           response_time_step2: responseTime,
         }),
@@ -58,7 +61,7 @@ export default function SurveyStep2Page() {
       const data = await response.json();
 
       if (!response.ok) {
-        alert(data.message || '오류가 발생했습니다.');
+        showError(data.message || '오류가 발생했습니다.');
         setLoading(false);
         return;
       }
@@ -67,7 +70,7 @@ export default function SurveyStep2Page() {
       router.push('/raffle');
     } catch (error) {
       console.error('Submit error:', error);
-      alert('네트워크 오류가 발생했습니다.');
+      showError('네트워크 오류가 발생했습니다.');
       setLoading(false);
     }
   };

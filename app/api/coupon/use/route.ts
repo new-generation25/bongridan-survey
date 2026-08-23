@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin, supabaseHelpers } from '@/lib/supabase';
+import { db, COLLECTIONS, Timestamp } from '@/lib/firebase';
 import { ERROR_MESSAGES } from '@/lib/constants';
-import { getKoreaTodayStartISO } from '@/lib/utils';
+
+// Node.js 런타임 사용
+export const runtime = 'nodejs';
+
+// 한국 시간 기준 오늘 시작 시간
+function getKoreaTodayStart(): Date {
+  const now = new Date();
+  const koreaOffset = 9 * 60; // UTC+9
+  const koreaTime = new Date(now.getTime() + koreaOffset * 60 * 1000);
+  koreaTime.setUTCHours(0, 0, 0, 0);
+  return new Date(koreaTime.getTime() - koreaOffset * 60 * 1000);
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,87 +25,120 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 쿠폰 사용 처리 (원자적 업데이트: status가 'issued'인 경우에만 업데이트)
-    const { data: coupon, error: couponError } = await supabaseAdmin
-      .from('coupons')
-      .update({
-        status: 'used',
-        used_at: new Date().toISOString(),
-        used_store_id: store_id,
-      })
-      .eq('code', code)
-      .eq('status', 'issued') // 이미 사용된 쿠폰은 업데이트되지 않음
-      .select()
-      .single();
+    // 가맹점 존재 및 활성화 상태 확인
+    const storeDoc = await db
+      .collection(COLLECTIONS.STORES)
+      .doc(store_id)
+      .get();
 
-    if (couponError || !coupon) {
-      // 쿠폰이 없거나 이미 사용된 경우
-      if (couponError?.code === 'PGRST116' || !coupon) {
-        // 쿠폰 상태 확인
-        const { data: existingCoupon } = await supabaseAdmin
-          .from('coupons')
-          .select('status')
-          .eq('code', code)
-          .maybeSingle();
-        
-        console.log('[DEBUG API] Coupon status check:', {code,couponErrorCode:couponError?.code,existingCouponStatus:existingCoupon?.status});
-        
-        if (existingCoupon?.status === 'used') {
-          console.log('[DEBUG API] Returning already used error:', {code});
-          return NextResponse.json(
-            { success: false, message: '이미 사용된 쿠폰입니다' },
-            { status: 400 }
-          );
-        }
-        
-        return NextResponse.json(
-          { success: false, message: ERROR_MESSAGES.COUPON_NOT_FOUND },
-          { status: 404 }
-        );
-      }
-      
-      console.error('Coupon use error:', couponError);
+    if (!storeDoc.exists) {
       return NextResponse.json(
-        { success: false, message: ERROR_MESSAGES.INTERNAL_ERROR },
-        { status: 500 }
+        { success: false, message: ERROR_MESSAGES.STORE_NOT_FOUND },
+        { status: 404 }
       );
     }
 
-    // 가맹점 통계 조회 (한국 시간 기준)
-    const todayISO = getKoreaTodayStartISO();
+    const store = storeDoc.data();
+    if (!store?.is_active) {
+      return NextResponse.json(
+        { success: false, message: '비활성화된 가맹점입니다.' },
+        { status: 403 }
+      );
+    }
 
-    const { count: todayCount } = await supabaseAdmin
-      .from('coupons')
-      .select('*', { count: 'exact', head: true })
-      .eq('used_store_id', store_id)
-      .eq('status', 'used')
-      .gte('used_at', todayISO);
+    // 쿠폰 조회
+    const couponSnapshot = await db
+      .collection(COLLECTIONS.COUPONS)
+      .where('code', '==', code)
+      .limit(1)
+      .get();
 
-    const { count: totalCount } = await supabaseAdmin
-      .from('coupons')
-      .select('*', { count: 'exact', head: true })
-      .eq('used_store_id', store_id)
-      .eq('status', 'used');
+    if (couponSnapshot.empty) {
+      return NextResponse.json(
+        { success: false, message: ERROR_MESSAGES.COUPON_NOT_FOUND },
+        { status: 404 }
+      );
+    }
 
-    console.log('[DEBUG API] Returning success response:', {code,success:true});
-    
+    const couponDoc = couponSnapshot.docs[0];
+    const coupon = couponDoc.data();
+
+    // 쿠폰 상태 확인
+    if (coupon.status === 'used') {
+      return NextResponse.json(
+        { success: false, message: '이미 사용된 쿠폰입니다' },
+        { status: 400 }
+      );
+    }
+
+    if (coupon.status !== 'issued') {
+      return NextResponse.json(
+        { success: false, message: ERROR_MESSAGES.COUPON_NOT_FOUND },
+        { status: 404 }
+      );
+    }
+
+    // 쿠폰 사용 처리 (트랜잭션)
+    const now = Timestamp.now();
+    await db.runTransaction(async (transaction) => {
+      // 쿠폰 상태 재확인
+      const freshCouponDoc = await transaction.get(couponDoc.ref);
+      if (freshCouponDoc.data()?.status !== 'issued') {
+        throw new Error('COUPON_ALREADY_USED');
+      }
+
+      transaction.update(couponDoc.ref, {
+        status: 'used',
+        used_at: now,
+        used_store_id: store_id,
+      });
+    });
+
+    // 가맹점 통계 조회
+    const todayStart = getKoreaTodayStart();
+    const todayTimestamp = Timestamp.fromDate(todayStart);
+
+    // 오늘 사용 건수
+    const todaySnapshot = await db
+      .collection(COLLECTIONS.COUPONS)
+      .where('used_store_id', '==', store_id)
+      .where('status', '==', 'used')
+      .where('used_at', '>=', todayTimestamp)
+      .get();
+    const todayCount = todaySnapshot.size;
+
+    // 전체 사용 건수
+    const totalSnapshot = await db
+      .collection(COLLECTIONS.COUPONS)
+      .where('used_store_id', '==', store_id)
+      .where('status', '==', 'used')
+      .get();
+    const totalCount = totalSnapshot.size;
+
     return NextResponse.json({
       success: true,
       total_amount: coupon.amount,
-      used_count: totalCount || 0,
+      used_count: totalCount,
       store_stats: {
-        today_count: todayCount || 0,
-        today_amount: (todayCount || 0) * coupon.amount,
-        total_count: totalCount || 0,
-        total_amount: (totalCount || 0) * coupon.amount,
+        today_count: todayCount,
+        today_amount: todayCount * coupon.amount,
+        total_count: totalCount,
+        total_amount: totalCount * coupon.amount,
       },
     });
   } catch (error) {
     console.error('Use coupon error:', error);
+
+    if (error instanceof Error && error.message === 'COUPON_ALREADY_USED') {
+      return NextResponse.json(
+        { success: false, message: '이미 사용된 쿠폰입니다' },
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json(
       { success: false, message: ERROR_MESSAGES.INTERNAL_ERROR },
       { status: 500 }
     );
   }
 }
-
