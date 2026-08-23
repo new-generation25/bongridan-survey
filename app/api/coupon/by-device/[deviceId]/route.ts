@@ -101,7 +101,7 @@ export async function GET(
 
     // 사용된 가맹점 정보 조회
     const usedStoreIds = [...new Set(safeCoupons
-      .filter(c => c.used_store_id)
+      .filter((c): c is typeof c & { used_store_id: string } => !!c.used_store_id)
       .map(c => c.used_store_id))];
 
     const storesMap: Record<string, string> = {};
