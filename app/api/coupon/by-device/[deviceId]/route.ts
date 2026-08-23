@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
+import { db, COLLECTIONS } from '@/lib/firebase';
 import { ERROR_MESSAGES } from '@/lib/constants';
+
+// Node.js 런타임 사용
+export const runtime = 'nodejs';
 
 /**
  * 디바이스 ID로 쿠폰 목록 조회
@@ -34,20 +37,12 @@ export async function GET(
     }
 
     // 해당 device_id로 생성된 설문 조회
-    const { data: surveys, error: surveyError } = await supabaseAdmin
-      .from('surveys')
-      .select('id')
-      .eq('device_id', deviceId);
+    const surveysSnapshot = await db
+      .collection(COLLECTIONS.SURVEYS)
+      .where('device_id', '==', deviceId)
+      .get();
 
-    if (surveyError) {
-      console.error('Get surveys error:', surveyError);
-      return NextResponse.json(
-        { success: false, message: ERROR_MESSAGES.INTERNAL_ERROR },
-        { status: 500 }
-      );
-    }
-
-    if (!surveys || surveys.length === 0) {
+    if (surveysSnapshot.empty) {
       return NextResponse.json({
         success: true,
         coupons: [],
@@ -56,65 +51,58 @@ export async function GET(
       });
     }
 
-    const surveyIds = surveys.map(s => s.id);
+    const surveyIds = surveysSnapshot.docs.map(doc => doc.id);
 
     // 쿠폰 조회 쿼리 빌드
-    let query = supabaseAdmin
-      .from('coupons')
-      .select('*', { count: 'exact' })
-      .in('survey_id', surveyIds)
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
+    let query = db
+      .collection(COLLECTIONS.COUPONS)
+      .where('survey_id', 'in', surveyIds.slice(0, 10)) // Firestore 'in' 최대 10개
+      .orderBy('issued_at', 'desc');
 
-    // 상태 필터
-    if (status === 'active') {
-      query = query.eq('status', 'active');
-    } else if (status === 'used') {
-      query = query.eq('status', 'used');
-    } else if (status === 'expired') {
-      query = query.eq('status', 'expired');
+    // 상태 필터 (별도 쿼리 필요 - Firestore 제한)
+    const couponsSnapshot = await query.get();
+
+    let coupons = couponsSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    // 상태 필터 (클라이언트 사이드)
+    if (status !== 'all') {
+      coupons = coupons.filter(c => c.status === status);
     }
 
-    const { data: coupons, error: couponError, count } = await query;
+    // 페이지네이션 (클라이언트 사이드)
+    const total = coupons.length;
+    coupons = coupons.slice(offset, offset + limit);
 
-    if (couponError) {
-      console.error('Get coupons error:', couponError);
-      return NextResponse.json(
-        { success: false, message: ERROR_MESSAGES.INTERNAL_ERROR },
-        { status: 500 }
-      );
-    }
-
-    // 쿠폰 데이터 가공 (민감 정보 제외)
-    const safeCoupons = (coupons || []).map(coupon => ({
+    // 쿠폰 데이터 가공
+    const safeCoupons = coupons.map(coupon => ({
       id: coupon.id,
       code: coupon.code,
       status: coupon.status,
-      discount_amount: coupon.discount_amount,
-      created_at: coupon.created_at,
-      expires_at: coupon.expires_at,
-      used_at: coupon.used_at,
+      discount_amount: coupon.amount,
+      created_at: coupon.issued_at?.toDate?.() || coupon.issued_at,
+      expires_at: coupon.expires_at?.toDate?.() || coupon.expires_at,
+      used_at: coupon.used_at?.toDate?.() || coupon.used_at,
       used_store_id: coupon.used_store_id,
-      // QR 데이터 생성 (쿠폰 ID 기반)
       qr_data: `bongridan://coupon/${coupon.id}`,
     }));
 
     // 사용된 가맹점 정보 조회
-    const usedStoreIds = safeCoupons
+    const usedStoreIds = [...new Set(safeCoupons
       .filter(c => c.used_store_id)
-      .map(c => c.used_store_id);
+      .map(c => c.used_store_id))];
 
-    let storesMap: Record<string, string> = {};
-    if (usedStoreIds.length > 0) {
-      const { data: stores } = await supabaseAdmin
-        .from('stores')
-        .select('id, name')
-        .in('id', usedStoreIds);
-
-      storesMap = (stores || []).reduce((acc, s) => {
-        acc[s.id] = s.name;
-        return acc;
-      }, {} as Record<string, string>);
+    const storesMap: Record<string, string> = {};
+    for (const storeId of usedStoreIds) {
+      const storeDoc = await db
+        .collection(COLLECTIONS.STORES)
+        .doc(storeId)
+        .get();
+      if (storeDoc.exists) {
+        storesMap[storeId] = storeDoc.data()?.name || '';
+      }
     }
 
     // 가맹점 이름 추가
@@ -126,11 +114,11 @@ export async function GET(
     return NextResponse.json({
       success: true,
       coupons: enrichedCoupons,
-      total: count || 0,
+      total,
       pagination: {
         limit,
         offset,
-        has_more: (count || 0) > offset + limit,
+        has_more: total > offset + limit,
       }
     });
   } catch (error) {

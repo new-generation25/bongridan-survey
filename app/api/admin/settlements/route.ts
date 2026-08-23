@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
+import { db, COLLECTIONS, Timestamp, generateId } from '@/lib/firebase';
 import { ERROR_MESSAGES, COUPON_CONFIG } from '@/lib/constants';
 import { verifyAdminToken } from '@/lib/auth';
+
+// Node.js 런타임 사용
+export const runtime = 'nodejs';
 
 // GET: 정산 이력 조회
 export async function GET(request: NextRequest) {
@@ -14,56 +17,66 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 정산 이력 조회 (가맹점 정보 포함)
-    const { data: settlements, error } = await supabaseAdmin
-      .from('settlements')
-      .select(`
-        *,
-        stores (
-          id,
-          name
-        )
-      `)
-      .order('created_at', { ascending: false });
+    // 정산 이력 조회
+    const settlementsSnap = await db
+      .collection(COLLECTIONS.SETTLEMENTS)
+      .orderBy('created_at', 'desc')
+      .get();
 
-    if (error) {
-      console.error('Get settlements error:', error);
-      return NextResponse.json(
-        { success: false, message: ERROR_MESSAGES.INTERNAL_ERROR },
-        { status: 500 }
-      );
-    }
+    const settlements = await Promise.all(
+      settlementsSnap.docs.map(async (doc) => {
+        const data = doc.data();
+        // 가맹점 정보 조회
+        let storeName = null;
+        if (data.store_id) {
+          const storeDoc = await db
+            .collection(COLLECTIONS.STORES)
+            .doc(data.store_id)
+            .get();
+          storeName = storeDoc.data()?.name || null;
+        }
+        return {
+          id: doc.id,
+          ...data,
+          created_at: data.created_at?.toDate?.().toISOString() || data.created_at,
+          stores: storeName ? { id: data.store_id, name: storeName } : null,
+        };
+      })
+    );
 
     // 가맹점별 미정산 현황 계산
-    const { data: allStores } = await supabaseAdmin
-      .from('stores')
-      .select('id, name');
+    const storesSnap = await db.collection(COLLECTIONS.STORES).get();
 
     const storesWithUnsettled = await Promise.all(
-      (allStores || []).map(async (store) => {
-        // 전체 사용 건수 조회
-        const { count: usedCount } = await supabaseAdmin
-          .from('coupons')
-          .select('*', { count: 'exact', head: true })
-          .eq('used_store_id', store.id)
-          .eq('status', 'used');
+      storesSnap.docs.map(async (storeDoc) => {
+        const store = storeDoc.data();
+        const storeId = storeDoc.id;
 
-        // 정산 금액은 쿠폰 사용 건수 × SETTLEMENT_RATE원으로 계산
-        const totalAmount = (usedCount || 0) * COUPON_CONFIG.SETTLEMENT_RATE;
+        // 전체 사용 건수 조회
+        const usedCouponsSnap = await db
+          .collection(COLLECTIONS.COUPONS)
+          .where('used_store_id', '==', storeId)
+          .where('status', '==', 'used')
+          .get();
+        const usedCount = usedCouponsSnap.size;
+
+        // 정산 금액 계산
+        const totalAmount = usedCount * COUPON_CONFIG.SETTLEMENT_RATE;
 
         // 정산된 금액
-        const { data: storeSettlements } = await supabaseAdmin
-          .from('settlements')
-          .select('amount')
-          .eq('store_id', store.id);
-
-        const settledAmount = storeSettlements?.reduce((sum, s) => sum + s.amount, 0) || 0;
+        const storeSettlementsSnap = await db
+          .collection(COLLECTIONS.SETTLEMENTS)
+          .where('store_id', '==', storeId)
+          .get();
+        const settledAmount = storeSettlementsSnap.docs.reduce(
+          (sum, doc) => sum + (doc.data().amount || 0), 0
+        );
         const unsettledAmount = totalAmount - settledAmount;
 
         return {
-          store_id: store.id,
+          store_id: storeId,
           store_name: store.name,
-          used_count: usedCount || 0,
+          used_count: usedCount,
           total_amount: totalAmount,
           settled_amount: settledAmount,
           unsettled_amount: unsettledAmount,
@@ -73,7 +86,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      settlements: settlements || [],
+      settlements,
       stores_unsettled: storesWithUnsettled.filter((s) => s.unsettled_amount > 0),
     });
   } catch (error) {
@@ -113,13 +126,12 @@ export async function POST(request: NextRequest) {
     }
 
     // 가맹점 존재 확인
-    const { data: store } = await supabaseAdmin
-      .from('stores')
-      .select('id')
-      .eq('id', store_id)
-      .single();
+    const storeDoc = await db
+      .collection(COLLECTIONS.STORES)
+      .doc(store_id)
+      .get();
 
-    if (!store) {
+    if (!storeDoc.exists) {
       return NextResponse.json(
         { success: false, message: '가맹점을 찾을 수 없습니다.' },
         { status: 404 }
@@ -127,52 +139,50 @@ export async function POST(request: NextRequest) {
     }
 
     // 정산 기록 추가
-    const { data: settlement, error } = await supabaseAdmin
-      .from('settlements')
-      .insert({
-        store_id,
-        amount,
-        note: note || null,
-        settled_by: 'admin', // 실제로는 토큰에서 관리자 정보 가져오기
-      })
-      .select()
-      .single();
+    const settlementId = generateId();
+    const now = Timestamp.now();
 
-    if (error) {
-      console.error('Create settlement error:', error);
-      return NextResponse.json(
-        { success: false, message: ERROR_MESSAGES.INTERNAL_ERROR },
-        { status: 500 }
-      );
-    }
+    const settlementData = {
+      store_id,
+      amount,
+      note: note || null,
+      settled_by: 'admin',
+      created_at: now,
+    };
+
+    await db.collection(COLLECTIONS.SETTLEMENTS).doc(settlementId).set(settlementData);
 
     // 가맹점의 total_settled 업데이트
-    const { data: existingSettlements } = await supabaseAdmin
-      .from('settlements')
-      .select('amount')
-      .eq('store_id', store_id);
+    const storeSettlementsSnap = await db
+      .collection(COLLECTIONS.SETTLEMENTS)
+      .where('store_id', '==', store_id)
+      .get();
+    const totalSettled = storeSettlementsSnap.docs.reduce(
+      (sum, doc) => sum + (doc.data().amount || 0), 0
+    );
 
-    const totalSettled = existingSettlements?.reduce((sum, s) => sum + s.amount, 0) || 0;
-
-    await supabaseAdmin
-      .from('stores')
-      .update({ total_settled: totalSettled })
-      .eq('id', store_id);
+    await db
+      .collection(COLLECTIONS.STORES)
+      .doc(store_id)
+      .update({ total_settled: totalSettled });
 
     // 미정산 금액 계산
-    const { count: usedCount } = await supabaseAdmin
-      .from('coupons')
-      .select('*', { count: 'exact', head: true })
-      .eq('used_store_id', store_id)
-      .eq('status', 'used');
-
-    // 정산 금액은 쿠폰 사용 건수 × SETTLEMENT_RATE원으로 계산
-    const totalAmount = (usedCount || 0) * COUPON_CONFIG.SETTLEMENT_RATE;
+    const usedCouponsSnap = await db
+      .collection(COLLECTIONS.COUPONS)
+      .where('used_store_id', '==', store_id)
+      .where('status', '==', 'used')
+      .get();
+    const usedCount = usedCouponsSnap.size;
+    const totalAmount = usedCount * COUPON_CONFIG.SETTLEMENT_RATE;
     const unsettledAmount = totalAmount - totalSettled;
 
     return NextResponse.json({
       success: true,
-      settlement,
+      settlement: {
+        id: settlementId,
+        ...settlementData,
+        created_at: now.toDate().toISOString(),
+      },
       store_unsettled_amount: unsettledAmount,
     });
   } catch (error) {
@@ -183,4 +193,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

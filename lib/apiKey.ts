@@ -1,10 +1,10 @@
-// API 키 생성 및 관리 유틸리티
+// API 키 생성 및 관리 유틸리티 - Firebase 버전
 
 import { randomBytes } from 'crypto';
-import { supabaseAdmin } from './supabase';
+import { db, COLLECTIONS, Timestamp, generateId } from './firebase';
 
 // API 키 형식: brg_{32자리 랜덤 문자열}
-export function generateApiKey(): string {
+export function generateApiKeyString(): string {
   const prefix = 'brg';
   const randomPart = randomBytes(24).toString('base64url'); // URL-safe base64
   return `${prefix}_${randomPart}`;
@@ -42,36 +42,45 @@ export async function createApiKey(params: {
   expiresInDays?: number;
 }): Promise<{ key: string; keyInfo: ApiKeyInfo } | null> {
   try {
-    const key = generateApiKey();
+    const key = generateApiKeyString();
     const keyHash = await hashApiKey(key);
+    const keyId = generateId();
 
     const expiresAt = params.expiresInDays
-      ? new Date(Date.now() + params.expiresInDays * 24 * 60 * 60 * 1000).toISOString()
+      ? Timestamp.fromDate(new Date(Date.now() + params.expiresInDays * 24 * 60 * 60 * 1000))
       : null;
 
-    const { data, error } = await supabaseAdmin
-      .from('api_keys')
-      .insert({
+    const now = Timestamp.now();
+
+    const keyData = {
+      key_hash: keyHash,
+      key_prefix: key.substring(0, 8), // 식별용 prefix (brg_xxxx)
+      partner_name: params.partnerName,
+      partner_contact: params.partnerContact,
+      permissions: params.permissions || ['survey', 'coupon'],
+      rate_limit: params.rateLimitPerHour || 1000,
+      is_active: true,
+      created_at: now,
+      last_used_at: null,
+      expires_at: expiresAt,
+    };
+
+    await db.collection(COLLECTIONS.API_KEYS).doc(keyId).set(keyData);
+
+    return {
+      key, // 이 키는 한 번만 보여줌 (저장 안 됨)
+      keyInfo: {
+        id: keyId,
         key_hash: keyHash,
-        key_prefix: key.substring(0, 8), // 식별용 prefix (brg_xxxx)
         partner_name: params.partnerName,
         partner_contact: params.partnerContact,
         permissions: params.permissions || ['survey', 'coupon'],
         rate_limit: params.rateLimitPerHour || 1000,
         is_active: true,
-        expires_at: expiresAt,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Create API key error:', error);
-      return null;
-    }
-
-    return {
-      key, // 이 키는 한 번만 보여줌 (저장 안 됨)
-      keyInfo: data,
+        created_at: now.toDate().toISOString(),
+        last_used_at: null,
+        expires_at: expiresAt ? expiresAt.toDate().toISOString() : null,
+      },
     };
   } catch (error) {
     console.error('Create API key error:', error);
@@ -88,29 +97,40 @@ export async function validateApiKeyFromDB(key: string): Promise<ApiKeyInfo | nu
 
     const keyHash = await hashApiKey(key);
 
-    const { data, error } = await supabaseAdmin
-      .from('api_keys')
-      .select('*')
-      .eq('key_hash', keyHash)
-      .eq('is_active', true)
-      .single();
+    const snapshot = await db
+      .collection(COLLECTIONS.API_KEYS)
+      .where('key_hash', '==', keyHash)
+      .where('is_active', '==', true)
+      .limit(1)
+      .get();
 
-    if (error || !data) {
+    if (snapshot.empty) {
       return null;
     }
 
+    const doc = snapshot.docs[0];
+    const data = doc.data();
+
     // 만료 체크
-    if (data.expires_at && new Date(data.expires_at) < new Date()) {
+    if (data.expires_at && data.expires_at.toDate() < new Date()) {
       return null;
     }
 
     // 마지막 사용 시간 업데이트
-    await supabaseAdmin
-      .from('api_keys')
-      .update({ last_used_at: new Date().toISOString() })
-      .eq('id', data.id);
+    await doc.ref.update({ last_used_at: Timestamp.now() });
 
-    return data;
+    return {
+      id: doc.id,
+      key_hash: data.key_hash,
+      partner_name: data.partner_name,
+      partner_contact: data.partner_contact,
+      permissions: data.permissions,
+      rate_limit: data.rate_limit,
+      is_active: data.is_active,
+      created_at: data.created_at?.toDate?.().toISOString() || data.created_at,
+      last_used_at: data.last_used_at?.toDate?.().toISOString() || null,
+      expires_at: data.expires_at?.toDate?.().toISOString() || null,
+    };
   } catch (error) {
     console.error('Validate API key error:', error);
     return null;
@@ -120,12 +140,12 @@ export async function validateApiKeyFromDB(key: string): Promise<ApiKeyInfo | nu
 // API 키 비활성화
 export async function revokeApiKey(keyId: string): Promise<boolean> {
   try {
-    const { error } = await supabaseAdmin
-      .from('api_keys')
-      .update({ is_active: false })
-      .eq('id', keyId);
+    await db
+      .collection(COLLECTIONS.API_KEYS)
+      .doc(keyId)
+      .update({ is_active: false });
 
-    return !error;
+    return true;
   } catch (error) {
     console.error('Revoke API key error:', error);
     return false;
@@ -135,17 +155,26 @@ export async function revokeApiKey(keyId: string): Promise<boolean> {
 // API 키 목록 조회 (관리자용)
 export async function listApiKeys(): Promise<ApiKeyInfo[]> {
   try {
-    const { data, error } = await supabaseAdmin
-      .from('api_keys')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const snapshot = await db
+      .collection(COLLECTIONS.API_KEYS)
+      .orderBy('created_at', 'desc')
+      .get();
 
-    if (error) {
-      console.error('List API keys error:', error);
-      return [];
-    }
-
-    return data || [];
+    return snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        key_hash: data.key_hash,
+        partner_name: data.partner_name,
+        partner_contact: data.partner_contact,
+        permissions: data.permissions,
+        rate_limit: data.rate_limit,
+        is_active: data.is_active,
+        created_at: data.created_at?.toDate?.().toISOString() || data.created_at,
+        last_used_at: data.last_used_at?.toDate?.().toISOString() || null,
+        expires_at: data.expires_at?.toDate?.().toISOString() || null,
+      };
+    });
   } catch (error) {
     console.error('List API keys error:', error);
     return [];

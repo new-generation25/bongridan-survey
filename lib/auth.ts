@@ -1,9 +1,9 @@
-// 인증 헬퍼 함수 (JWT + bcrypt)
+// 인증 헬퍼 함수 (JWT + bcrypt) - Firebase 버전
 
 import { NextRequest } from 'next/server';
 import { SignJWT, jwtVerify } from 'jose';
 import bcrypt from 'bcryptjs';
-import { supabaseAdmin } from './supabase';
+import { db, COLLECTIONS, Timestamp } from './firebase';
 
 // JWT 시크릿 키 (환경변수에서 가져오거나 기본값 사용)
 const JWT_SECRET = new TextEncoder().encode(
@@ -63,20 +63,23 @@ export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, saltRounds);
 }
 
-// 관리자 비밀번호 확인 (bcrypt)
+// 관리자 비밀번호 확인 (bcrypt) - Firebase 버전
 export async function verifyAdminPassword(password: string): Promise<boolean> {
   try {
-    const { data: setting, error } = await supabaseAdmin
-      .from('settings')
-      .select('value')
-      .eq('key', 'admin_password')
-      .maybeSingle();
+    const settingDoc = await db
+      .collection(COLLECTIONS.SETTINGS)
+      .doc('admin_password')
+      .get();
 
-    if (error || !setting) {
+    if (!settingDoc.exists) {
       return false;
     }
 
-    const storedPassword = setting.value;
+    const storedPassword = settingDoc.data()?.value;
+
+    if (!storedPassword) {
+      return false;
+    }
 
     // 기존 평문 비밀번호 호환성 유지 (해시가 아닌 경우)
     // bcrypt 해시는 '$2a$' 또는 '$2b$'로 시작
@@ -85,10 +88,13 @@ export async function verifyAdminPassword(password: string): Promise<boolean> {
       if (password === storedPassword) {
         // 로그인 성공 시 비밀번호를 해시로 자동 업그레이드
         const hashedPassword = await hashPassword(password);
-        await supabaseAdmin
-          .from('settings')
-          .update({ value: hashedPassword })
-          .eq('key', 'admin_password');
+        await db
+          .collection(COLLECTIONS.SETTINGS)
+          .doc('admin_password')
+          .set({
+            value: hashedPassword,
+            updated_at: Timestamp.now(),
+          }, { merge: true });
 
         console.log('Admin password automatically upgraded to bcrypt hash');
         return true;
@@ -109,15 +115,13 @@ export async function changeAdminPassword(newPassword: string): Promise<boolean>
   try {
     const hashedPassword = await hashPassword(newPassword);
 
-    const { error } = await supabaseAdmin
-      .from('settings')
-      .update({ value: hashedPassword })
-      .eq('key', 'admin_password');
-
-    if (error) {
-      console.error('Password change error:', error);
-      return false;
-    }
+    await db
+      .collection(COLLECTIONS.SETTINGS)
+      .doc('admin_password')
+      .set({
+        value: hashedPassword,
+        updated_at: Timestamp.now(),
+      }, { merge: true });
 
     return true;
   } catch (error) {
