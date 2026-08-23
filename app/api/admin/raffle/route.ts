@@ -55,15 +55,21 @@ export async function GET(request: NextRequest) {
 
     const entriesSnapshots = await Promise.all(entriesPromises);
     const entries = entriesSnapshots.flatMap(snap =>
-      snap.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        created_at: doc.data().created_at?.toDate?.().toISOString() || doc.data().created_at,
-      }))
+      snap.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          survey_id: data.survey_id as string,
+          name: data.name as string,
+          phone: data.phone as string,
+          agreed_privacy: data.agreed_privacy as boolean,
+          created_at: data.created_at?.toDate?.().toISOString() || data.created_at,
+        };
+      })
     );
 
     // 추첨 응모를 하지 않은 설문 완료자도 포함하여 표시
-    const entriesMap = new Map(entries.map((e: { survey_id: string }) => [e.survey_id, e]));
+    const entriesMap = new Map(entries.map(e => [e.survey_id, e]));
     const allEntries = completedSurveys.map((survey: { id: string; q1_region?: string; created_at?: { toDate?: () => Date } | string }) => {
       const entry = entriesMap.get(survey.id);
       const surveyCreatedAt = typeof survey.created_at === 'object' && survey.created_at?.toDate
@@ -166,10 +172,16 @@ export async function POST(request: NextRequest) {
 
     const entriesSnapshots = await Promise.all(entriesPromises);
     const entries = entriesSnapshots.flatMap(snap =>
-      snap.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }))
+      snap.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          survey_id: data.survey_id as string,
+          name: data.name as string,
+          phone: data.phone as string,
+          created_at: data.created_at?.toDate?.().toISOString() || data.created_at,
+        };
+      })
     );
 
     if (entries.length === 0) {
