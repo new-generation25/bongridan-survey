@@ -12,6 +12,8 @@
     "@supabase/supabase-js": "^2.39.0",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
+    "firebase": "^12.18.0",
+    "firebase-admin": "^14.3.0",
     "html5-qrcode": "^2.3.8",
     "jose": "^6.2.10",
     "next": "^15.1.0",
