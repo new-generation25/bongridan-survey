@@ -25,7 +25,18 @@ export async function GET(
       );
     }
 
-    const coupon = { id: couponDoc.id, ...couponDoc.data() };
+    const couponData = couponDoc.data();
+    const coupon = {
+      id: couponDoc.id,
+      survey_id: couponData?.survey_id as string | undefined,
+      code: couponData?.code as string,
+      amount: couponData?.amount as number,
+      status: couponData?.status as string,
+      issued_at: couponData?.issued_at,
+      expires_at: couponData?.expires_at,
+      used_at: couponData?.used_at,
+      used_store_id: couponData?.used_store_id as string | undefined,
+    };
 
     // 설문 완료 상태 및 경품 응모 여부 확인
     let surveyStageCompleted = 1;
@@ -35,7 +46,7 @@ export async function GET(
       // 설문 조회
       const surveyDoc = await db
         .collection(COLLECTIONS.SURVEYS)
-        .doc(coupon.survey_id as string)
+        .doc(coupon.survey_id)
         .get();
 
       if (surveyDoc.exists) {
