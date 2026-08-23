@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
+import { db, COLLECTIONS, Timestamp } from '@/lib/firebase';
 import { ERROR_MESSAGES } from '@/lib/constants';
-import { getKoreaTodayStartISO } from '@/lib/utils';
+
+// Node.js 런타임 사용
+export const runtime = 'nodejs';
+
+// 한국 시간 기준 오늘 시작 시간
+function getKoreaTodayStart(): Date {
+  const now = new Date();
+  const koreaOffset = 9 * 60;
+  const koreaTime = new Date(now.getTime() + koreaOffset * 60 * 1000);
+  koreaTime.setUTCHours(0, 0, 0, 0);
+  return new Date(koreaTime.getTime() - koreaOffset * 60 * 1000);
+}
 
 export async function GET(
   request: NextRequest,
@@ -18,59 +29,54 @@ export async function GET(
     }
 
     // 가맹점 정보 조회
-    const { data: store, error: storeError } = await supabaseAdmin
-      .from('stores')
-      .select('name')
-      .eq('id', id)
-      .maybeSingle();
+    const storeDoc = await db
+      .collection(COLLECTIONS.STORES)
+      .doc(id)
+      .get();
 
-    if (storeError || !store) {
+    if (!storeDoc.exists) {
       return NextResponse.json(
         { success: false, message: ERROR_MESSAGES.STORE_NOT_FOUND },
         { status: 404 }
       );
     }
 
+    const store = storeDoc.data();
+
     // 오늘 통계 (한국 시간 기준)
-    const todayISO = getKoreaTodayStartISO();
+    const todayStart = getKoreaTodayStart();
+    const todayTimestamp = Timestamp.fromDate(todayStart);
 
-    const { count: todayCount } = await supabaseAdmin
-      .from('coupons')
-      .select('*', { count: 'exact', head: true })
-      .eq('used_store_id', id)
-      .eq('status', 'used')
-      .gte('used_at', todayISO);
+    const todayCouponsSnap = await db
+      .collection(COLLECTIONS.COUPONS)
+      .where('used_store_id', '==', id)
+      .where('status', '==', 'used')
+      .where('used_at', '>=', todayTimestamp)
+      .get();
 
-    const { data: todayCoupons } = await supabaseAdmin
-      .from('coupons')
-      .select('amount')
-      .eq('used_store_id', id)
-      .eq('status', 'used')
-      .gte('used_at', todayISO);
-
-    const todayAmount = todayCoupons?.reduce((sum, c) => sum + (c.amount || 500), 0) || 0;
+    const todayCount = todayCouponsSnap.size;
+    const todayAmount = todayCouponsSnap.docs.reduce(
+      (sum, doc) => sum + (doc.data().amount || 500), 0
+    );
 
     // 전체 통계
-    const { count: totalCount } = await supabaseAdmin
-      .from('coupons')
-      .select('*', { count: 'exact', head: true })
-      .eq('used_store_id', id)
-      .eq('status', 'used');
+    const totalCouponsSnap = await db
+      .collection(COLLECTIONS.COUPONS)
+      .where('used_store_id', '==', id)
+      .where('status', '==', 'used')
+      .get();
 
-    const { data: totalCoupons } = await supabaseAdmin
-      .from('coupons')
-      .select('amount')
-      .eq('used_store_id', id)
-      .eq('status', 'used');
-
-    const totalAmount = totalCoupons?.reduce((sum, c) => sum + (c.amount || 500), 0) || 0;
+    const totalCount = totalCouponsSnap.size;
+    const totalAmount = totalCouponsSnap.docs.reduce(
+      (sum, doc) => sum + (doc.data().amount || 500), 0
+    );
 
     return NextResponse.json({
       success: true,
-      store_name: store.name,
-      today_count: todayCount || 0,
+      store_name: store?.name,
+      today_count: todayCount,
       today_amount: todayAmount,
-      total_count: totalCount || 0,
+      total_count: totalCount,
       total_amount: totalAmount,
     });
   } catch (error) {
@@ -81,4 +87,3 @@ export async function GET(
     );
   }
 }
-

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin, supabaseHelpers } from '@/lib/supabase';
+import { db, COLLECTIONS, Timestamp, generateId } from '@/lib/firebase';
 import { ERROR_MESSAGES } from '@/lib/constants';
+
+// Node.js 런타임 사용
+export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,8 +28,13 @@ export async function POST(request: NextRequest) {
     }
 
     // 중복 응모 확인 (전화번호 기준)
-    const isDuplicate = await supabaseHelpers.checkDuplicateRaffleEntry(phone);
-    if (isDuplicate) {
+    const existingSnap = await db
+      .collection(COLLECTIONS.RAFFLE_ENTRIES)
+      .where('phone', '==', phone)
+      .limit(1)
+      .get();
+
+    if (!existingSnap.empty) {
       return NextResponse.json(
         { success: false, message: '경품 응모는 한번만 참여할 수 있습니다.' },
         { status: 409 }
@@ -34,28 +42,22 @@ export async function POST(request: NextRequest) {
     }
 
     // 추첨 응모 삽입
-    const { data: entry, error } = await supabaseAdmin
-      .from('raffle_entries')
-      .insert({
-        survey_id,
-        name,
-        phone,
-        agreed_privacy,
-      })
-      .select()
-      .single();
+    const entryId = generateId();
+    const now = Timestamp.now();
 
-    if (error || !entry) {
-      console.error('Raffle entry error:', error);
-      return NextResponse.json(
-        { success: false, message: ERROR_MESSAGES.INTERNAL_ERROR },
-        { status: 500 }
-      );
-    }
+    const entryData = {
+      survey_id,
+      name,
+      phone,
+      agreed_privacy,
+      created_at: now,
+    };
+
+    await db.collection(COLLECTIONS.RAFFLE_ENTRIES).doc(entryId).set(entryData);
 
     return NextResponse.json({
       success: true,
-      entry_id: entry.id,
+      entry_id: entryId,
     });
   } catch (error) {
     console.error('Raffle entry error:', error);
@@ -65,4 +67,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

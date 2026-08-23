@@ -1,32 +1,84 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin, supabaseHelpers } from '@/lib/supabase';
-import { ERROR_MESSAGES } from '@/lib/constants';
+import { db, COLLECTIONS, Timestamp } from '@/lib/firebase';
+import { ERROR_MESSAGES, COUPON_CONFIG } from '@/lib/constants';
+
+// Node.js 런타임 사용
+export const runtime = 'nodejs';
+
+// 쿠폰 유효성 검증 헬퍼
+async function validateCoupon(code: string): Promise<{
+  valid: boolean;
+  message?: string;
+  coupon?: {
+    id: string;
+    code: string;
+    amount: number;
+    status: string;
+    issued_at: string;
+    expires_at: string;
+    used_at?: string | null;
+  };
+}> {
+  // 쿠폰 코드로 조회
+  const couponSnap = await db
+    .collection(COLLECTIONS.COUPONS)
+    .where('code', '==', code)
+    .limit(1)
+    .get();
+
+  if (couponSnap.empty) {
+    return { valid: false, message: ERROR_MESSAGES.COUPON_NOT_FOUND };
+  }
+
+  const couponDoc = couponSnap.docs[0];
+  const coupon = couponDoc.data();
+
+  // 이미 사용된 쿠폰인지 확인
+  if (coupon.status === 'used') {
+    return { valid: false, message: ERROR_MESSAGES.COUPON_USED };
+  }
+
+  // 만료 확인
+  const expiresAt = coupon.expires_at?.toDate?.() || new Date(coupon.expires_at);
+  if (expiresAt < new Date()) {
+    return { valid: false, message: ERROR_MESSAGES.COUPON_EXPIRED };
+  }
+
+  return {
+    valid: true,
+    coupon: {
+      id: couponDoc.id,
+      code: coupon.code,
+      amount: coupon.amount || COUPON_CONFIG.AMOUNT,
+      status: coupon.status,
+      issued_at: coupon.issued_at?.toDate?.().toISOString() || coupon.issued_at,
+      expires_at: expiresAt.toISOString(),
+      used_at: coupon.used_at?.toDate?.().toISOString() || null,
+    },
+  };
+}
 
 // GET: URL로 접근 시 (QR 코드 스캔)
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const couponId = searchParams.get('id');
-    const storeId = searchParams.get('store'); // 상점용 파라미터
+    const storeId = searchParams.get('store');
 
     if (!couponId) {
-      // 쿠폰 ID가 없으면 안내 페이지로 리다이렉트
       return NextResponse.redirect(new URL('/coupon/qr-info', request.url));
     }
 
-    // 상점용 앱에서 스캔한 경우 (store 파라미터가 있거나 Referer가 /store/로 시작)
     const referer = request.headers.get('referer') || '';
     const isStoreApp = storeId !== null || referer.includes('/store/');
 
     // 쿠폰 ID로 쿠폰 정보 조회
-    const { data: coupon, error } = await supabaseAdmin
-      .from('coupons')
-      .select('*')
-      .eq('id', couponId)
-      .maybeSingle();
+    const couponDoc = await db
+      .collection(COLLECTIONS.COUPONS)
+      .doc(couponId)
+      .get();
 
-    if (error || !coupon) {
-      // 상점용 앱인 경우 JSON으로 에러 반환
+    if (!couponDoc.exists) {
       if (isStoreApp && storeId) {
         return NextResponse.json({
           success: false,
@@ -34,15 +86,13 @@ export async function GET(request: NextRequest) {
           message: '쿠폰을 찾을 수 없습니다',
         }, { status: 404 });
       }
-      // 쿠폰을 찾을 수 없으면 안내 페이지로 리다이렉트
       return NextResponse.redirect(new URL('/coupon/qr-info', request.url));
     }
 
-    // 쿠폰 유효성 검증
-    const validation = await supabaseHelpers.validateCoupon(coupon.code);
+    const coupon = couponDoc.data();
+    const validation = await validateCoupon(coupon?.code);
 
     if (!validation.valid) {
-      // 상점용 앱인 경우 JSON으로 에러 반환
       if (isStoreApp && storeId) {
         return NextResponse.json({
           success: false,
@@ -50,12 +100,10 @@ export async function GET(request: NextRequest) {
           message: validation.message || '유효하지 않은 쿠폰입니다',
         }, { status: 400 });
       }
-      // 일반 사용자가 스캔한 경우: 안내 페이지로 리다이렉트
       return NextResponse.redirect(new URL('/coupon/qr-info', request.url));
     }
 
     if (isStoreApp && storeId) {
-      // 상점용 앱: JSON 응답 반환 (상점 앱에서 처리)
       return NextResponse.json({
         success: true,
         valid: true,
@@ -63,15 +111,13 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // 일반 사용자가 스캔한 경우: 안내 페이지로 리다이렉트
     return NextResponse.redirect(new URL('/coupon/qr-info', request.url));
   } catch (error) {
     console.error('Validate coupon error:', error);
-    // 상점용 앱인 경우 JSON으로 에러 반환
     const referer = request.headers.get('referer') || '';
     const storeId = request.nextUrl.searchParams.get('store');
     const isStoreApp = storeId !== null || referer.includes('/store/');
-    
+
     if (isStoreApp && storeId) {
       return NextResponse.json({
         success: false,
@@ -79,7 +125,6 @@ export async function GET(request: NextRequest) {
         message: ERROR_MESSAGES.INTERNAL_ERROR,
       }, { status: 500 });
     }
-    // 오류 발생 시 안내 페이지로 리다이렉트
     return NextResponse.redirect(new URL('/coupon/qr-info', request.url));
   }
 }
@@ -96,7 +141,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const validation = await supabaseHelpers.validateCoupon(code);
+    const validation = await validateCoupon(code);
 
     if (!validation.valid) {
       return NextResponse.json(
@@ -118,4 +163,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

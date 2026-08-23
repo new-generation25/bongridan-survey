@@ -1,6 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseHelpers } from '@/lib/supabase';
+import { db, COLLECTIONS, Timestamp } from '@/lib/firebase';
 import { ERROR_MESSAGES } from '@/lib/constants';
+
+// Node.js 런타임 사용
+export const runtime = 'nodejs';
+
+// 한국 시간 기준 오늘 시작 시간
+function getKoreaTodayStart(): Date {
+  const now = new Date();
+  const koreaOffset = 9 * 60;
+  const koreaTime = new Date(now.getTime() + koreaOffset * 60 * 1000);
+  koreaTime.setUTCHours(0, 0, 0, 0);
+  return new Date(koreaTime.getTime() - koreaOffset * 60 * 1000);
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,7 +25,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const isDuplicate = await supabaseHelpers.checkDuplicateSurvey(device_id);
+    // 오늘 설문 중복 체크
+    const todayStart = getKoreaTodayStart();
+    const todayTimestamp = Timestamp.fromDate(todayStart);
+
+    const existingSnap = await db
+      .collection(COLLECTIONS.SURVEYS)
+      .where('device_id', '==', device_id)
+      .where('created_at', '>=', todayTimestamp)
+      .limit(1)
+      .get();
+
+    const isDuplicate = !existingSnap.empty;
 
     return NextResponse.json({
       success: true,
@@ -28,4 +51,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
