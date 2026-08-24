@@ -13,11 +13,22 @@ function initializeFirebaseAdmin() {
   const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
   if (!serviceAccount) {
-    console.warn('Warning: FIREBASE_SERVICE_ACCOUNT_KEY not set');
-    // 개발 환경에서는 에뮬레이터 사용 가능
-    return initializeApp({
-      projectId: process.env.FIREBASE_PROJECT_ID || 'bonghwang-memories',
-    });
+    // 운영 환경에서는 반드시 설정되어야 함
+    if (process.env.NODE_ENV === 'production' || process.env.VERCEL) {
+      throw new Error(
+        'FIREBASE_SERVICE_ACCOUNT_KEY is required in production. ' +
+        'Please set the environment variable in Vercel project settings.'
+      );
+    }
+    // 로컬 개발 환경에서만 에뮬레이터 사용 (명시적 프로젝트 ID 필수)
+    const projectId = process.env.FIREBASE_PROJECT_ID;
+    if (!projectId) {
+      throw new Error(
+        'FIREBASE_PROJECT_ID is required when FIREBASE_SERVICE_ACCOUNT_KEY is not set.'
+      );
+    }
+    console.warn('Warning: Using Firebase without service account (dev mode)');
+    return initializeApp({ projectId });
   }
 
   try {
