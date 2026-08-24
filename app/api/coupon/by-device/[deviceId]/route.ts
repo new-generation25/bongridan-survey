@@ -6,13 +6,25 @@ import { ERROR_MESSAGES } from '@/lib/constants';
 // Node.js 런타임 사용
 export const runtime = 'nodejs';
 
-// API 키 검증 (외부 요청만)
+// API 키 검증 (모든 요청, localhost 제외)
 async function checkApiKey(request: NextRequest): Promise<boolean> {
   const origin = request.headers.get('origin');
-  if (!origin || origin.includes('bongridan-survey')) return true;
-  if (origin.includes('localhost')) return true;
+  const host = request.headers.get('host');
+
+  // localhost 개발 환경은 통과
+  if (origin?.includes('localhost') || host?.includes('localhost')) {
+    return true;
+  }
+
+  // 같은 도메인 (브라우저 직접 접근)은 통과
+  if (origin?.includes('bongridan-survey')) {
+    return true;
+  }
+
+  // 외부 요청은 API 키 필수
   const apiKey = request.headers.get('x-api-key');
   if (!apiKey) return false;
+
   const keyInfo = await validateApiKeyFromDB(apiKey);
   return keyInfo !== null && (keyInfo.permissions.includes('coupon') || keyInfo.permissions.includes('device'));
 }
@@ -99,8 +111,14 @@ export async function GET(
     });
 
     // 상태 필터 (클라이언트 사이드)
+    // 'issued'는 'active'와 동일하게 취급 (사용 가능한 쿠폰)
     if (status !== 'all') {
-      coupons = coupons.filter(c => c.status === status);
+      if (status === 'active') {
+        // 'active' 필터: issued 또는 active 상태 모두 포함
+        coupons = coupons.filter(c => c.status === 'active' || c.status === 'issued');
+      } else {
+        coupons = coupons.filter(c => c.status === status);
+      }
     }
 
     // 페이지네이션 (클라이언트 사이드)
@@ -108,11 +126,14 @@ export async function GET(
     coupons = coupons.slice(offset, offset + limit);
 
     // 쿠폰 데이터 가공
+    // - 'issued'를 'active'로 정규화 (사용 가능 상태)
+    // - amount와 discount_amount 둘 다 제공 (호환성)
     const safeCoupons = coupons.map(coupon => ({
       id: coupon.id,
       code: coupon.code,
-      status: coupon.status,
-      discount_amount: coupon.amount,
+      status: coupon.status === 'issued' ? 'active' : coupon.status,
+      amount: coupon.amount || 500,
+      discount_amount: coupon.amount || 500,
       created_at: coupon.issued_at?.toDate?.() || coupon.issued_at,
       expires_at: coupon.expires_at?.toDate?.() || coupon.expires_at,
       used_at: coupon.used_at?.toDate?.() || coupon.used_at,

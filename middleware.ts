@@ -30,7 +30,7 @@ function getValidApiKeys(): string[] {
   return keys.split(',').filter(Boolean);
 }
 
-// API 키 검증
+// API 키 검증 (미들웨어는 1차 방어선, 라우트에서 DB 검증이 최종)
 function validateApiKey(request: NextRequest): boolean {
   const apiKey = request.headers.get('x-api-key');
 
@@ -38,15 +38,19 @@ function validateApiKey(request: NextRequest): boolean {
     return false;
   }
 
-  const validKeys = getValidApiKeys();
-
-  // 환경 변수에 키가 설정되지 않은 경우 (개발 환경)
-  if (validKeys.length === 0) {
-    console.warn('Warning: No PARTNER_API_KEYS configured');
-    return true; // 개발 환경에서는 통과
+  // brg_ 프리픽스 확인 (DB 발급 키 형식)
+  if (!apiKey.startsWith('brg_')) {
+    return false;
   }
 
-  return validKeys.includes(apiKey);
+  // 환경변수 키가 있으면 1차 검증 (없으면 라우트에서 DB 검증)
+  const validKeys = getValidApiKeys();
+  if (validKeys.length > 0) {
+    return validKeys.includes(apiKey);
+  }
+
+  // 환경변수 없으면 형식만 확인하고 통과 (라우트에서 DB 검증)
+  return true;
 }
 
 // 경로가 API 키 검증이 필요한지 확인
@@ -91,21 +95,22 @@ export function middleware(request: NextRequest) {
     return addCorsHeaders(response, origin);
   }
 
-  // API 키 검증이 필요한 경로
+  // API 키 검증이 필요한 경로 (Origin 유무와 관계없이 모든 요청 검증)
   if (requiresApiKey(pathname)) {
-    // 외부 요청인 경우 (origin 헤더가 있는 경우)
-    if (origin && !origin.includes('localhost')) {
-      if (!validateApiKey(request)) {
-        const response = NextResponse.json(
-          {
-            success: false,
-            message: 'Invalid or missing API key',
-            code: 'UNAUTHORIZED'
-          },
-          { status: 401 }
-        );
-        return addCorsHeaders(response, origin);
-      }
+    // localhost 개발 환경은 통과
+    const isLocalhost = origin?.includes('localhost') ||
+                        request.headers.get('host')?.includes('localhost');
+
+    if (!isLocalhost && !validateApiKey(request)) {
+      const response = NextResponse.json(
+        {
+          success: false,
+          message: 'Invalid or missing API key',
+          code: 'UNAUTHORIZED'
+        },
+        { status: 401 }
+      );
+      return addCorsHeaders(response, origin);
     }
   }
 

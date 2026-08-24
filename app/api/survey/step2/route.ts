@@ -14,13 +14,25 @@ import type { SurveyStep2Data } from '@/lib/types';
 // Node.js 런타임 사용
 export const runtime = 'nodejs';
 
-// API 키 검증 (외부 요청만)
+// API 키 검증 (모든 요청, localhost 제외)
 async function checkApiKey(request: NextRequest): Promise<boolean> {
   const origin = request.headers.get('origin');
-  if (!origin || origin.includes('bongridan-survey')) return true;
-  if (origin.includes('localhost')) return true;
+  const host = request.headers.get('host');
+
+  // localhost 개발 환경은 통과
+  if (origin?.includes('localhost') || host?.includes('localhost')) {
+    return true;
+  }
+
+  // 같은 도메인 (브라우저 직접 접근)은 통과
+  if (origin?.includes('bongridan-survey')) {
+    return true;
+  }
+
+  // 그 외 모든 요청 (서버-서버 포함)은 API 키 필수
   const apiKey = request.headers.get('x-api-key');
   if (!apiKey) return false;
+
   const keyInfo = await validateApiKeyFromDB(apiKey);
   return keyInfo !== null && keyInfo.permissions.includes('survey');
 }

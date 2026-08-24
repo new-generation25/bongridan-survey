@@ -13,12 +13,20 @@ export async function GET() {
       .where('is_active', '==', true)
       .get();
 
+    // 외부 응답에서 민감 정보 제외 (total_settled, created_at)
     const stores = snapshot.docs
-      .map(doc => ({
-        id: doc.id,
-        name: doc.data().name as string,
-        ...doc.data(),
-      }))
+      .map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          name: data.name as string,
+          is_active: data.is_active as boolean,
+          // category, address, image_url은 데이터에 있으면 포함
+          ...(data.category && { category: data.category }),
+          ...(data.address && { address: data.address }),
+          ...(data.image_url && { image_url: data.image_url }),
+        };
+      })
       .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
 
     return NextResponse.json({
