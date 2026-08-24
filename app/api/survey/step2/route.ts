@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, COLLECTIONS, Timestamp } from '@/lib/firebase';
+import { validateApiKeyFromDB } from '@/lib/apiKey';
 import {
   ERROR_MESSAGES,
   FREQUENCIES,
@@ -12,6 +13,17 @@ import type { SurveyStep2Data } from '@/lib/types';
 
 // Node.js 런타임 사용
 export const runtime = 'nodejs';
+
+// API 키 검증 (외부 요청만)
+async function checkApiKey(request: NextRequest): Promise<boolean> {
+  const origin = request.headers.get('origin');
+  if (!origin || origin.includes('bongridan-survey')) return true;
+  if (origin.includes('localhost')) return true;
+  const apiKey = request.headers.get('x-api-key');
+  if (!apiKey) return false;
+  const keyInfo = await validateApiKeyFromDB(apiKey);
+  return keyInfo !== null && keyInfo.permissions.includes('survey');
+}
 
 // Step2 데이터에 device_id 추가
 interface SurveyStep2RequestData extends SurveyStep2Data {
@@ -42,6 +54,15 @@ function validateStep2Options(data: SurveyStep2Data): string | null {
 
 export async function POST(request: NextRequest) {
   try {
+    // API 키 검증
+    const isValidKey = await checkApiKey(request);
+    if (!isValidKey) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid or missing API key', code: 'UNAUTHORIZED' },
+        { status: 401 }
+      );
+    }
+
     const data: SurveyStep2RequestData = await request.json();
 
     // 필수 필드 검증 (device_id 추가)

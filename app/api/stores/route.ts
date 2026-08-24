@@ -7,16 +7,19 @@ export const runtime = 'nodejs';
 
 export async function GET() {
   try {
+    // Firestore 복합 인덱스 없이 조회 (클라이언트 정렬)
     const snapshot = await db
       .collection(COLLECTIONS.STORES)
       .where('is_active', '==', true)
-      .orderBy('name')
       .get();
 
-    const stores = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    const stores = snapshot.docs
+      .map(doc => ({
+        id: doc.id,
+        name: doc.data().name as string,
+        ...doc.data(),
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
 
     return NextResponse.json({
       success: true,

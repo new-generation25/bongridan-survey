@@ -1,9 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, COLLECTIONS } from '@/lib/firebase';
+import { validateApiKeyFromDB } from '@/lib/apiKey';
 import { ERROR_MESSAGES } from '@/lib/constants';
 
 // Node.js 런타임 사용
 export const runtime = 'nodejs';
+
+// API 키 검증 (외부 요청만)
+async function checkApiKey(request: NextRequest): Promise<boolean> {
+  const origin = request.headers.get('origin');
+  if (!origin || origin.includes('bongridan-survey')) return true;
+  if (origin.includes('localhost')) return true;
+  const apiKey = request.headers.get('x-api-key');
+  if (!apiKey) return false;
+  const keyInfo = await validateApiKeyFromDB(apiKey);
+  return keyInfo !== null && (keyInfo.permissions.includes('coupon') || keyInfo.permissions.includes('device'));
+}
 
 /**
  * 디바이스 ID로 쿠폰 목록 조회
@@ -21,6 +33,15 @@ export async function GET(
   { params }: { params: Promise<{ deviceId: string }> }
 ) {
   try {
+    // API 키 검증
+    const isValidKey = await checkApiKey(request);
+    if (!isValidKey) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid or missing API key', code: 'UNAUTHORIZED' },
+        { status: 401 }
+      );
+    }
+
     const { deviceId } = await params;
     const searchParams = request.nextUrl.searchParams;
 
